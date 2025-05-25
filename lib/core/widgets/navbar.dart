@@ -69,7 +69,9 @@ class Navbar extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => Flowgram(carreraId: carrera),
+                                builder: (context) => Flowgram(
+                                  carreraId: carrera.toLowerCase().replaceAll(' ', '_'),
+                                )
                             ),
                           );
                         } else {
@@ -90,7 +92,8 @@ class Navbar extends StatelessWidget {
                     }
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const CareerPage()),
+                      MaterialPageRoute(
+                          builder: (context) => const CareerPage()),
                     );
                   }),
 
