@@ -1,89 +1,124 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'profile_settings_page.dart'; // Asegúrate de que la ruta sea correcta
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'profile_settings_page.dart';
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'profile_settings_page.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
 
-  void _confirmDeleteAccount(BuildContext context) async {
-    final user = FirebaseAuth.instance.currentUser;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Eliminar cuenta'),
-        content: const Text('¿Estás seguro de que deseas eliminar tu cuenta? Esta acción no se puede deshacer.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Eliminar')),
-        ],
-      ),
-    );
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
 
-    if (confirmed == true && user != null) {
-      await user.delete();
-      Navigator.of(context).popUntil((route) => route.isFirst);
-    }
-  }
+class _ProfilePageState extends State<ProfilePage> {
+  final user = FirebaseAuth.instance.currentUser;
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+    return FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(user?.uid)
+          .get(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
 
-    final String name = user?.displayName ?? 'Usuario';
-    final String email = user?.email ?? 'Sin correo';
-    final String profileImageUrl = user?.photoURL ?? 'https://via.placeholder.com/150';
+        if (!snapshot.hasData || !snapshot.data!.exists) {
+          return const Scaffold(
+            body: Center(child: Text('No se encontró el perfil.')),
+          );
+        }
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.orange,
-        title: const Text('Mi Perfil'),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ProfileSettingsPage()),
-              );
-            },
+        final data = snapshot.data!.data() as Map<String, dynamic>;
+        final name = data['fullName'] ?? 'Usuario';
+        final email = data['email'] ?? 'Sin correo';
+        final photoURL = data['profileImageUrl'] ?? 'https://via.placeholder.com/150';
+
+        return Scaffold(
+          backgroundColor: Colors.white,
+          appBar: AppBar(
+            backgroundColor: Colors.orange,
+            title: const Text('Mi Perfil'),
+            centerTitle: true,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.settings),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ProfileSettingsPage(),
+                    ),
+                  ).then((_) => setState(() {}));
+                },
+              ),
+            ],
           ),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            GestureDetector(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ProfileSettingsPage()),
-              ),
-              child: CircleAvatar(
-                radius: 50,
-                backgroundImage: NetworkImage(profileImageUrl),
-              ),
+          body: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircleAvatar(
+                  radius: 50,
+                  backgroundImage: NetworkImage(photoURL),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  email,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey,
+                  ),
+                ),
+                const SizedBox(height: 40),
+                ElevatedButton(
+                  onPressed: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Eliminar cuenta'),
+                        content: const Text('¿Seguro que deseas eliminar tu cuenta? Esta acción no se puede deshacer.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancelar'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('Eliminar'),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirm == true) {
+                      await user?.delete();
+                      Navigator.of(context).popUntil((route) => route.isFirst);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  child: const Text('Eliminar cuenta'),
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
-            Text(name, style: const TextStyle(fontSize: 24)),
-            const SizedBox(height: 10),
-            Text(email, style: const TextStyle(color: Colors.grey)),
-            const Spacer(),
-            ElevatedButton(
-              onPressed: () => _confirmDeleteAccount(context),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('Eliminar cuenta'),
-            )
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
+
+//lito

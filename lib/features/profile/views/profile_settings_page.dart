@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProfileSettingsPage extends StatefulWidget {
   const ProfileSettingsPage({Key? key}) : super(key: key);
@@ -15,17 +13,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   final _formKey = GlobalKey<FormState>();
   String _name = '';
   String _email = '';
-  File? _image;
-
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      setState(() {
-        _image = File(pickedFile.path);
-      });
-    }
-  }
+  String _photoURL = '';
+  final _photoController = TextEditingController();
 
   void _saveSettings() async {
     if (_formKey.currentState?.validate() ?? false) {
@@ -36,22 +25,30 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
         await user.updateDisplayName(_name);
         await user.updateEmail(_email);
 
-        // Aquí deberías subir la imagen a Firebase Storage y obtener la URL
-        // Por simplicidad, se omite ese código
-        // Supón que tienes una URL nueva: final photoURL = 'url';
-        // await user.updatePhotoURL(photoURL);
+        await FirebaseFirestore.instance.collection('usuarios').doc(user.uid).set({
+          'fullName': _name,
+          'email': _email,
+          'profileImageUrl': _photoURL,
+        }, SetOptions(merge: true));
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Cambios guardados exitosamente')),
         );
+        Navigator.pop(context);
       }
     }
   }
 
   @override
+  void dispose() {
+    _photoController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Configuración de Perfil')),
+      appBar: AppBar(title: const Text('Editar Perfil')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -59,14 +56,11 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           child: ListView(
             children: [
               Center(
-                child: GestureDetector(
-                  onTap: _pickImage,
-                  child: CircleAvatar(
-                    radius: 50,
-                    backgroundImage:
-                    _image != null ? FileImage(_image!) : null,
-                    child: _image == null ? const Icon(Icons.camera_alt) : null,
-                  ),
+                child: CircleAvatar(
+                  radius: 50,
+                  backgroundImage: _photoURL.isNotEmpty
+                      ? NetworkImage(_photoURL)
+                      : const AssetImage('assets/placeholder.png') as ImageProvider,
                 ),
               ),
               const SizedBox(height: 20),
@@ -78,6 +72,13 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
               TextFormField(
                 decoration: const InputDecoration(labelText: 'Correo electrónico'),
                 onSaved: (value) => _email = value ?? '',
+                validator: (value) => value!.isEmpty ? 'Campo requerido' : null,
+              ),
+              TextFormField(
+                controller: _photoController,
+                decoration: const InputDecoration(labelText: 'URL de la foto de perfil'),
+                onChanged: (value) => setState(() => _photoURL = value),
+                onSaved: (value) => _photoURL = value ?? '',
                 validator: (value) => value!.isEmpty ? 'Campo requerido' : null,
               ),
               const SizedBox(height: 20),
@@ -92,3 +93,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     );
   }
 }
+
+
+
+
