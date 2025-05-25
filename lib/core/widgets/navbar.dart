@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../features/landing/views/landing_page.dart';
-import '../../features/career/views/career_page.dart';
 import '../../features/auth/views/login_page.dart';
 import '../../features/profile/views/profile_page.dart';
 import '../../features/profile/views/profile_settings_page.dart';
@@ -43,12 +42,7 @@ class Navbar extends StatelessWidget {
                       MaterialPageRoute(builder: (context) => const LandingPage()),
                     );
                   }),
-                  _navButton('Mi carrera', () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const CareerPage()),
-                    );
-                  }),
+                  _navItem('Mi carrera'),
                   _navItem('Materias'),
                   const SizedBox(width: 20),
 
