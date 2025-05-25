@@ -1,89 +1,116 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class Flowgram extends StatelessWidget {
-  final String carreraId; // Ejemplo: "ingenieria_software"
+class Flowgram extends StatefulWidget {
+  final String carreraId;
 
-  const Flowgram({super.key, required this.carreraId}); //Revisar atributo de la carrera
+  const Flowgram({super.key, required this.carreraId});
 
-  static const Map<String, List<Map<String, dynamic>>> _materiasPorCarrera = {
-    'Ingeniería de Software': [
-      {'nombre': 'Cálculo I', 'semestre': 1},
-      {'nombre': 'Programación Básica', 'semestre': 1},
-      {'nombre': 'Física I', 'semestre': 2, 'prerrequisito': 'Cálculo I'},
-      // ... más materias
-    ],
-    'Medicina': [
-      {'nombre': 'Anatomía', 'semestre': 1},
-      {'nombre': 'Biología Celular', 'semestre': 1},
-      // ... más materias
-    ],
-  };
+  @override
+  State<Flowgram> createState() => _FlowgramState();
+}
+
+class _FlowgramState extends State<Flowgram> {
+  late Future<Map<String, dynamic>> _flujogramaData;
+
+  @override
+  void initState() {
+    super.initState();
+    _flujogramaData = _cargarFlujograma();
+  }
+
+  Future<Map<String, dynamic>> _cargarFlujograma() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('flujogramas')
+          .doc(widget.carreraId.toLowerCase().replaceAll(' ', '_'))
+          .get();
+
+      if (!doc.exists) {
+        throw Exception('Flujograma no encontrado');
+      }
+
+      return doc.data()!;
+    } catch (e) {
+      debugPrint('Error cargando flujograma: $e');
+      return {
+        'nombre': widget.carreraId,
+        'materias': [],
+      };
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final materias = _materiasPorCarrera[carreraId] ?? [];
-
     return Scaffold(
-      backgroundColor: Colors.white, // Fondo blanco obligatorio
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text('Flujograma - $carreraId'),
+        title: FutureBuilder(
+          future: _flujogramaData,
+          builder: (context, snapshot) {
+            final nombre = snapshot.hasData ? snapshot.data!['nombre'] : widget.carreraId;
+            return Text('Flujograma - $nombre');
+          },
+        ),
         backgroundColor: Colors.orange,
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: SizedBox(
-            height: 1000, // Asegura que haya espacio para el Stack
-            child: Stack(
-              children: [
-                const Positioned(
-                  left: 20,
-                  top: 40,
-                  child: Text(
-                    'Flujo de Materias',
-                    style: TextStyle(
-                      color: Color(0xFF1E293B),
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
+      body: FutureBuilder(
+        future: _flujogramaData,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+
+          final materias = List<Map<String, dynamic>>.from(snapshot.data!['materias'] ?? []);
+
+          return SafeArea(
+            child: SingleChildScrollView(
+              child: SizedBox(
+                height: 1000,
+                child: Stack(
+                  children: [
+                    // Encabezados
+                    const Positioned(
+                      left: 20,
+                      top: 40,
+                      child: Text(
+                        'Flujo de Materias',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
                     ),
-                  ),
+
+                    // Materias dinámicas
+                    ...materias.map((materia) {
+                      return Positioned(
+                        left: (materia['posX'] ?? 20).toDouble(),
+                        top: (materia['posY'] ?? 150).toDouble(),
+                        child: materia['prerrequisito'] == null
+                            ? _buildMateriaBox(materia['nombre'])
+                            : _buildPrereqBox(
+                          materia['nombre'],
+                          'Prerrequisito: ${materia['prerrequisito']}',
+                        ),
+                      );
+                    }).toList(),
+                  ],
                 ),
-                const Positioned(
-                  left: 20,
-                  top: 90,
-                  child: Text(
-                    'Visualiza y gestiona tu progreso académico de manera intuitiva',
-                    style: TextStyle(
-                      color: Color(0xFF64748B),
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-
-
-                // Materias principales
-                ...materias.map((materia) {
-                  return Positioned(
-                    left: materia['left'],
-                    top: materia['top'],
-                    child: materia['prerrequisito'] == null
-                        ? materiaBox(materia['nombre'])
-                        : prereqBox(
-                      materia['nombre'],
-                      'Prerrequisito: ${materia['prerrequisito']}',
-                    ),
-                  );
-                }).toList(),
-
-
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
 
-  static Widget materiaBox(String nombre) {
+  Widget _buildMateriaBox(String nombre) {
     return Container(
       width: 160,
       padding: const EdgeInsets.all(16),
@@ -102,9 +129,9 @@ class Flowgram extends StatelessWidget {
     );
   }
 
-  static Widget prereqBox(String nombre, String prerrequisitos) {
+  Widget _buildPrereqBox(String nombre, String prerrequisito) {
     return Opacity(
-      opacity: 0.5,
+      opacity: 0.7,
       child: Container(
         width: 160,
         padding: const EdgeInsets.all(16),
@@ -125,10 +152,10 @@ class Flowgram extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              prerrequisitos,
+              prerrequisito,
               style: const TextStyle(
                 color: Color(0xFF64748B),
-                fontSize: 14,
+                fontSize: 12,
               ),
             ),
           ],
