@@ -6,6 +6,7 @@ import '/features/career/widgets/flowgram.dart';
 
 class CareerPage extends StatelessWidget {
   const CareerPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     final User? user = FirebaseAuth.instance.currentUser;
@@ -29,19 +30,22 @@ class CareerPage extends StatelessWidget {
         }
 
         if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
-          return Scaffold(
-            body: Center(child: Text('No se encontraron datos del usuario')),
+          return const Scaffold(
+            body: Center(child: Text('Usuario no encontrado')),
           );
         }
 
-        final userData = userSnapshot.data!.data()!;
-        final carreraId = userData['major'] as String ?? 'Sin carrera';
+        final data = userSnapshot.data!.data()!;
+        final carreraId = data['carrera'] ?? 'Sin carrera';
+        final email = user.email ?? 'Sin email';
 
         return Scaffold(
-          body: ListView(
+          body: Column(
             children: [
-              Navbar(email: user.email ?? 'Usuario'),
-              Flowgram(carreraId: carreraId), // Pasa la carrera aquí
+              Navbar(email: email),
+              Expanded(
+                child: Flowgram(carreraId: carreraId),
+              ),
             ],
           ),
         );
@@ -49,22 +53,3 @@ class CareerPage extends StatelessWidget {
     );
   }
 }
-// @override
-// Widget build(BuildContext context) {
-//   return StreamBuilder<User?>(
-//     stream: FirebaseAuth.instance.authStateChanges(),
-//     builder: (context, snapshot) {
-//       final user = snapshot.data;
-//       final email = user?.email ?? 'Guest';
-//
-//       return Scaffold(
-//         body: ListView(
-//           children: [
-//             Navbar(email: email),
-//             Flowgram(),
-//           ],
-//         ),
-//       );
-//     },
-//   );
-// }

@@ -7,7 +7,6 @@ import '../../features/auth/views/login_page.dart';
 import '../../features/profile/views/profile_page.dart';
 import '../../features/profile/views/profile_settings_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../features/career/widgets/flowgram.dart';
 
 class Navbar extends StatelessWidget {
   final String email;
@@ -32,7 +31,7 @@ class Navbar extends StatelessWidget {
               // Logo
               Image.asset(
                 'assets/logo.png',
-                height: 120,
+                height: 70,
               ),
 
               // Nav items + buttons
@@ -57,7 +56,7 @@ class Navbar extends StatelessWidget {
                         );
 
                         // Obtener datos del estudiante
-                        final DocumentSnapshot<Map<String, dynamic>>doc = await FirebaseFirestore.instance
+                        final DocumentSnapshot<Map<String, dynamic>> doc = await FirebaseFirestore.instance
                             .collection('usuarios')
                             .doc(user.uid)
                             .get();
@@ -65,13 +64,10 @@ class Navbar extends StatelessWidget {
                         Navigator.pop(context); // Cerrar loading
 
                         if (doc.exists && doc.data()?['role'] == 'student') {
-                          final carrera = doc.data()?['major'];
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => Flowgram(
-                                  carreraId: carrera.toLowerCase().replaceAll(' ', '_'),
-                                )
+                              builder: (context) => const CareerPage(),
                             ),
                           );
                         } else {
@@ -90,11 +86,6 @@ class Navbar extends StatelessWidget {
                         const SnackBar(content: Text('Debes iniciar sesión')),
                       );
                     }
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const CareerPage()),
-                    );
                   }),
 
                   _navItem('Materias'),

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '/features/auth/models/user_model.dart';
 
 class Flowgram extends StatefulWidget {
   final String carreraId;
@@ -12,11 +15,13 @@ class Flowgram extends StatefulWidget {
 
 class _FlowgramState extends State<Flowgram> {
   late Future<Map<String, dynamic>> _flujogramaData;
+  late Future<List<Map<String, dynamic>>> _materiasDesdeUsuario;
 
   @override
   void initState() {
     super.initState();
     _flujogramaData = _cargarFlujograma();
+    _materiasDesdeUsuario = _cargarMateriasDesdeFlujogramaCompuesto();
   }
 
   Future<Map<String, dynamic>> _cargarFlujograma() async {
@@ -26,9 +31,7 @@ class _FlowgramState extends State<Flowgram> {
           .doc(widget.carreraId.toLowerCase().replaceAll(' ', '_'))
           .get();
 
-      if (!doc.exists) {
-        throw Exception('Flujograma no encontrado');
-      }
+      if (!doc.exists) throw Exception('Flujograma no encontrado');
 
       return doc.data()!;
     } catch (e) {
@@ -40,125 +43,272 @@ class _FlowgramState extends State<Flowgram> {
     }
   }
 
+  Future<List<Map<String, dynamic>>> _cargarMateriasDesdeFlujogramaCompuesto() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception('Usuario no autenticado');
+
+    try {
+      final usuarioDoc = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(user.uid)
+          .get();
+
+      final baseUser = await userFromDocument(usuarioDoc);
+      if (baseUser is! StudentUser) throw Exception('El usuario no es estudiante');
+      final student = baseUser as StudentUser;
+
+      final carreraDoc = await FirebaseFirestore.instance
+          .collection('carreras')
+          .doc(student.major)
+          .get();
+
+      final flujogramaId = carreraDoc.data()?['flujograma'];
+      if (flujogramaId == null) throw Exception('Carrera sin flujograma');
+
+      final flujogramaDoc = await FirebaseFirestore.instance
+          .collection('flujogramas')
+          .doc(flujogramaId)
+          .get();
+
+      final raw = flujogramaDoc.data();
+      debugPrint('📄 Campos del flujograma: $raw');
+
+      if (raw == null) throw Exception('Documento de flujograma vacío');
+
+      final materiasReferenciadas = raw.values.map((e) => e.toString()).toList();
+      debugPrint('🧩 Materias referenciadas: $materiasReferenciadas');
+
+      List<Map<String, dynamic>> materias = [];
+      for (final nombreMateria in materiasReferenciadas) {
+        final materiaDoc = await FirebaseFirestore.instance
+            .collection('materias')
+            .doc(nombreMateria)
+            .get();
+        if (materiaDoc.exists) {
+          materias.add({'nombre': materiaDoc.data()?['nombre'] ?? materiaDoc.id});
+        }
+      }
+
+      debugPrint('✅ Materias cargadas: ${materias.map((m) => m['nombre']).toList()}');
+      return materias;
+    } catch (e) {
+      debugPrint('❌ Error al obtener materias: $e');
+      return [];
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: FutureBuilder(
-          future: _flujogramaData,
-          builder: (context, snapshot) {
-            final nombre = snapshot.hasData ? snapshot.data!['nombre'] : widget.carreraId;
-            return Text('Flujograma - $nombre');
-          },
-        ),
-        backgroundColor: Colors.orange,
-      ),
-      body: FutureBuilder(
-        future: _flujogramaData,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-
-          final materias = List<Map<String, dynamic>>.from(snapshot.data!['materias'] ?? []);
-
-          return SafeArea(
-            child: SingleChildScrollView(
-              child: SizedBox(
-                height: 1000,
-                child: Stack(
-                  children: [
-                    // Encabezados
-                    const Positioned(
-                      left: 20,
-                      top: 40,
-                      child: Text(
-                        'Flujo de Materias',
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1E293B),
-                        ),
-                      ),
-                    ),
-
-                    // Materias dinámicas
-                    ...materias.map((materia) {
-                      return Positioned(
-                        left: (materia['posX'] ?? 20).toDouble(),
-                        top: (materia['posY'] ?? 150).toDouble(),
-                        child: materia['prerrequisito'] == null
-                            ? _buildMateriaBox(materia['nombre'])
-                            : _buildPrereqBox(
-                          materia['nombre'],
-                          'Prerrequisito: ${materia['prerrequisito']}',
-                        ),
-                      );
-                    }).toList(),
-                  ],
+    return Container(
+      color: Colors.white,
+      child: SingleChildScrollView(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Título
+                Text(
+                  'Flujo de Materias',
+                  style: GoogleFonts.poppins(
+                    color: const Color(0xFF1E293B),
+                    fontSize: 48,
+                    fontWeight: FontWeight.w700,
+                    height: 1.5,
+                  ),
                 ),
-              ),
+                const SizedBox(height: 16),
+                // Subtítulo
+                Text(
+                  'Visualiza y gestiona tu progreso académico de manera intuitiva',
+                  style: GoogleFonts.poppins(
+                    color: const Color(0xFF64748B),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w400,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                // Contenedor visual del flujograma
+                Container(
+                  height: 600,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x19000000),
+                        blurRadius: 6,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: FutureBuilder(
+                    future: _flujogramaData,
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) return const SizedBox.shrink();
+                      final materias = List<Map<String, dynamic>>.from(snapshot.data!['materias'] ?? []);
+                      return Stack(
+                        children: materias.map((materia) {
+                          final nombre = materia['nombre'] ?? '';
+                          final prereq = materia['prerrequisito'];
+                          final posX = (materia['posX'] ?? 0).toDouble();
+                          final posY = (materia['posY'] ?? 0).toDouble();
+
+                          return Positioned(
+                            left: posX,
+                            top: posY,
+                            child: prereq == null
+                                ? _materiaBox(nombre)
+                                : _materiaBoxConPrereq(nombre, prereq),
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 40),
+                // Materias dinámicas en columnas de 5
+                FutureBuilder<List<Map<String, dynamic>>>(
+                  future: _materiasDesdeUsuario,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const CircularProgressIndicator();
+                    }
+
+                    if (snapshot.hasError) {
+                      return Text('Error: ${snapshot.error}');
+                    }
+
+                    final materias = snapshot.data ?? [];
+
+                    if (materias.isEmpty) {
+                      return const Text('No se encontraron materias');
+                    }
+
+                    final columnas = <Widget>[];
+
+                    for (int i = 0; i < materias.length; i += 5) {
+                      final grupo = materias.skip(i).take(5).map((materia) {
+                        final nombre = materia['nombre'];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: ElevatedButton(
+                            onPressed: () {},
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFF8FAFC),
+                              foregroundColor: const Color(0xFF1E293B),
+                              elevation: 0,
+                              side: const BorderSide(color: Color(0xFFE5E7EB)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              minimumSize: const Size(250, 58),
+                            ),
+                            child: Text(
+                              nombre,
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList();
+
+                      columnas.add(Column(children: grupo));
+                    }
+
+                    return SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: columnas
+                            .asMap()
+                            .entries
+                            .map((entry) => Padding(
+                          padding: EdgeInsets.only(left: entry.key * 270.0),
+                          child: entry.value,
+                        ))
+                            .toList(),
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildMateriaBox(String nombre) {
+  Widget _materiaBox(String nombre) {
     return Container(
-      width: 160,
-      padding: const EdgeInsets.all(16),
+      width: 250,
+      height: 58,
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
       ),
-      child: Text(
-        nombre,
-        style: const TextStyle(
-          color: Color(0xFF1E293B),
-          fontSize: 16,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            nombre,
+            style: GoogleFonts.poppins(
+              color: const Color(0xFF1E293B),
+              fontSize: 16,
+              fontWeight: FontWeight.w400,
+              height: 1.5,
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildPrereqBox(String nombre, String prerrequisito) {
+  Widget _materiaBoxConPrereq(String nombre, String prerrequisito) {
     return Opacity(
       opacity: 0.7,
       child: Container(
-        width: 160,
-        padding: const EdgeInsets.all(16),
+        width: 250,
+        height: 83,
         decoration: BoxDecoration(
           color: const Color(0xFFF8FAFC),
-          border: Border.all(color: const Color(0xFFE5E7EB)),
           borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              nombre,
-              style: const TextStyle(
-                color: Color(0xFF1E293B),
-                fontSize: 16,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                nombre,
+                style: GoogleFonts.poppins(
+                  color: const Color(0xFF1E293B),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w400,
+                  height: 1.5,
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              prerrequisito,
-              style: const TextStyle(
-                color: Color(0xFF64748B),
-                fontSize: 12,
+              const SizedBox(height: 4),
+              Text(
+                'Prerrequisitos: $prerrequisito',
+                style: GoogleFonts.poppins(
+                  color: const Color(0xFF64748B),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  height: 1.5,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
