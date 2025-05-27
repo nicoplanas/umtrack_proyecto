@@ -23,12 +23,13 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
 
-  String? _tipoUsuario; // 'estudiante' o 'profesor'
+  String? _tipoUsuario;
   String? _selectedCarrera;
-  List<String> _carreras = [];
+  List<String> _carrerasVisibles = [];
+  Map<String, String> _carrerasMap = {};
   bool _isLoadingCarreras = false;
 
-  DateTime? _selectedBirthday; // NUEVO campo para fecha de nacimiento
+  DateTime? _selectedBirthday;
 
   @override
   void initState() {
@@ -43,7 +44,7 @@ class _SignUpPageState extends State<SignUpPage> {
     try {
       final snapshot = await _firestore
           .collection('carreras_pregrado')
-          .doc('sjs34UWA7WS5CzHyvRdc') // ID fijo de tu documento
+          .doc('sjs34UWA7WS5CzHyvRdc')
           .get();
 
       final data = snapshot.data();
@@ -52,21 +53,27 @@ class _SignUpPageState extends State<SignUpPage> {
       }
 
       final carrerasMap = data['carreras'] as Map<String, dynamic>;
-      final carreras = carrerasMap.entries.map((entry) {
-        final code = entry.key;
-        final nombre = entry.value['nombre'] ?? code;
-        return '$code - $nombre';
-      }).toList();
+
+      final Map<String, String> nombreToCodigo = {};
+      final List<String> nombresVisibles = [];
+
+      carrerasMap.forEach((codigo, contenido) {
+        final nombre = contenido['nombre'] ?? codigo;
+        nombreToCodigo[nombre] = codigo;
+        nombresVisibles.add(nombre);
+      });
 
       setState(() {
-        _carreras = carreras..sort(); // ej: ["ING-ME - Ingeniería Mecánica"]
+        _carrerasMap = nombreToCodigo;
+        _carrerasVisibles = nombresVisibles..sort();
       });
     } catch (e) {
       debugPrint('Error al cargar carreras: $e');
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Error al cargar carreras: $e')));
       setState(() {
-        _carreras = [];
+        _carrerasMap = {};
+        _carrerasVisibles = [];
       });
     } finally {
       setState(() {
@@ -78,8 +85,8 @@ class _SignUpPageState extends State<SignUpPage> {
   Future<void> _pickBirthday() async {
     final today = DateTime.now();
     final initialDate = _selectedBirthday ?? DateTime(today.year - 18, today.month, today.day);
-    final firstDate = DateTime(1900); // límite inferior año nacimiento
-    final lastDate = DateTime(today.year - 10); // límite superior año nacimiento (mínimo 10 años)
+    final firstDate = DateTime(1900);
+    final lastDate = DateTime(today.year - 10);
 
     final picked = await showDatePicker(
       context: context,
@@ -141,7 +148,7 @@ class _SignUpPageState extends State<SignUpPage> {
         'fullName': '${_nombreController.text.trim()} ${_apellidoController.text.trim()}',
         'username': _emailController.text.split('@')[0],
         'email': _emailController.text.trim(),
-        'birthday': _selectedBirthday!, // Aquí guardamos DateTime directo
+        'birthday': _selectedBirthday!,
         'profileImageUrl': '',
         'role': _tipoUsuario == 'estudiante' ? 'student' : 'professor',
         'createdAt': now,
@@ -149,13 +156,14 @@ class _SignUpPageState extends State<SignUpPage> {
       };
 
       if (_tipoUsuario == 'estudiante') {
-        final carreraCode = _selectedCarrera!.split(' - ').first;
+        final carreraCode = _carrerasMap[_selectedCarrera];
+        if (carreraCode == null) throw Exception('Código de carrera no encontrado');
+
         userData['major'] = carreraCode;
-        userData['passedCourses'] = [];
+        userData['passedCourses'] = {}; // <-- mapa vacío
         userData['dateOfEnrollment'] = now;
         userData['credits'] = 0;
-      }
-      else if (_tipoUsuario == 'profesor') {
+      } else if (_tipoUsuario == 'profesor') {
         userData['assignedCourses'] = [];
         userData['dateOfHiring'] = now;
       }
@@ -165,8 +173,11 @@ class _SignUpPageState extends State<SignUpPage> {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Usuario registrado exitosamente')));
 
-      // Opcional: limpiar formulario o navegar
-
+      // 🔁 Navegar a la landing page
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const LandingPage()),
+      );
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
@@ -179,10 +190,10 @@ class _SignUpPageState extends State<SignUpPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Cambio 2: Fondo blanco
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Registro'),
-        backgroundColor: Colors.orange, // Cambio 3: Morado → Naranja
+        backgroundColor: Colors.orange,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -213,30 +224,27 @@ class _SignUpPageState extends State<SignUpPage> {
                   return null;
                 },
               ),
-
-              // Cambio 1: Botón de fecha centrado
               const SizedBox(height: 16),
               Column(
-                crossAxisAlignment: CrossAxisAlignment.start, // Alineación izquierda
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Fecha de nacimiento:',
                       style: TextStyle(fontWeight: FontWeight.w600)),
                   TextButton(
                     onPressed: _pickBirthday,
                     style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero, // Elimina padding interno
-                      alignment: Alignment.centerLeft, // Alinea texto a la izquierda
+                      padding: EdgeInsets.zero,
+                      alignment: Alignment.centerLeft,
                     ),
                     child: Text(
                       _selectedBirthday == null
                           ? 'Selecciona una fecha'
                           : '${_selectedBirthday!.day}/${_selectedBirthday!.month}/${_selectedBirthday!.year}',
-                      textAlign: TextAlign.left, // Alineación de texto
+                      textAlign: TextAlign.left,
                     ),
                   ),
                 ],
               ),
-
               TextFormField(
                 controller: _passwordController,
                 decoration: const InputDecoration(labelText: 'Contraseña'),
@@ -279,10 +287,10 @@ class _SignUpPageState extends State<SignUpPage> {
                 _isLoadingCarreras
                     ? const Center(child: CircularProgressIndicator())
                     : DropdownButtonFormField<String>(
-                  value: _selectedCarrera != null && _carreras.contains(_selectedCarrera)
+                  value: _selectedCarrera != null && _carrerasVisibles.contains(_selectedCarrera)
                       ? _selectedCarrera
                       : null,
-                  items: _carreras
+                  items: _carrerasVisibles
                       .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                       .toList(),
                   onChanged: (val) {
@@ -299,7 +307,7 @@ class _SignUpPageState extends State<SignUpPage> {
               ElevatedButton(
                 onPressed: _register,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange, // Cambio 3: Morado → Naranja
+                  backgroundColor: Colors.orange,
                 ),
                 child: const Text('Registrarse'),
               )

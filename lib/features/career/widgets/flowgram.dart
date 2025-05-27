@@ -14,32 +14,58 @@ class Flowgram extends StatefulWidget {
 }
 
 class _FlowgramState extends State<Flowgram> {
-  late Future<Map<String, dynamic>> _flujogramaData;
   late Future<List<Map<String, dynamic>>> _materiasDesdeUsuario;
+  Set<String> _materiasAprobadas = {};
+  int _totalMaterias = 0;
 
   @override
   void initState() {
     super.initState();
-    _flujogramaData = _cargarFlujograma();
     _materiasDesdeUsuario = _cargarMateriasDesdeFlujogramaCompuesto();
+    _obtenerMateriasAprobadas();
   }
 
-  Future<Map<String, dynamic>> _cargarFlujograma() async {
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('flujogramas')
-          .doc(widget.carreraId.toLowerCase().replaceAll(' ', '_'))
-          .get();
+  Future<void> _obtenerMateriasAprobadas() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-      if (!doc.exists) throw Exception('Flujograma no encontrado');
+    final usuarioDoc = await FirebaseFirestore.instance
+        .collection('usuarios')
+        .doc(user.uid)
+        .get();
 
-      return doc.data()!;
-    } catch (e) {
-      debugPrint('Error cargando flujograma: $e');
-      return {
-        'nombre': widget.carreraId,
-        'materias': [],
-      };
+    final data = usuarioDoc.data();
+    final passed = data?['passedCourses'] as Map<String, dynamic>?;
+
+    if (passed != null) {
+      setState(() {
+        _materiasAprobadas = passed.keys.toSet();
+      });
+    }
+  }
+
+  Future<void> _toggleMateriaAprobada(String codigo) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final ref = FirebaseFirestore.instance.collection('usuarios').doc(user.uid);
+
+    final yaAprobada = _materiasAprobadas.contains(codigo);
+
+    if (yaAprobada) {
+      await ref.update({
+        'passedCourses.$codigo': FieldValue.delete(),
+      });
+      setState(() {
+        _materiasAprobadas.remove(codigo);
+      });
+    } else {
+      await ref.update({
+        'passedCourses.$codigo': codigo,
+      });
+      setState(() {
+        _materiasAprobadas.add(codigo);
+      });
     }
   }
 
@@ -57,29 +83,26 @@ class _FlowgramState extends State<Flowgram> {
       if (baseUser is! StudentUser) throw Exception('El usuario no es estudiante');
       final student = baseUser as StudentUser;
 
-      // Paso 1: Obtener el flujograma asociado a su carrera
-      final carrerasDoc = await FirebaseFirestore.instance
+      final carreraDoc = await FirebaseFirestore.instance
           .collection('carreras_pregrado')
-          .doc('sjs34UWA7WS5CzHyvRdc') // ID fijo basado en tu estructura
+          .doc('sjs34UWA7WS5CzHyvRdc')
           .get();
 
-      final flujogramaId = carrerasDoc.data()?['carreras']?[student.major]?['flujograma'];
-      if (flujogramaId == null) throw Exception('Flujograma no encontrado para esta carrera');
+      final flujogramaId = carreraDoc.data()?['carreras']?[student.major]?['flujograma'];
+      if (flujogramaId == null) throw Exception('Carrera sin flujograma');
 
-      // Paso 2: Obtener materias del flujograma
       final flujogramaDoc = await FirebaseFirestore.instance
           .collection('flujogramas_pregrado')
-          .get(); // Usamos `.get()` porque el ID es dinámico
+          .get();
 
       final flujogramaMap = flujogramaDoc.docs.first.data()['flujogramas']?[flujogramaId];
       if (flujogramaMap == null) throw Exception('No se encontraron materias en flujograma');
 
       final materiaIds = flujogramaMap.keys.toList();
 
-      // Paso 3: Obtener info de materias
       final materiasDoc = await FirebaseFirestore.instance
           .collection('materias_pregrado')
-          .get(); // Solo hay un documento con todas
+          .get();
 
       final materiasMap = materiasDoc.docs.first.data()['materias'];
 
@@ -89,11 +112,16 @@ class _FlowgramState extends State<Flowgram> {
         if (materiasMap.containsKey(id)) {
           final info = materiasMap[id];
           materias.add({
+            'codigo': id,
             'nombre': info['nombre'] ?? id,
             'creditos': info['creditos'] ?? 0,
           });
         }
       }
+
+      setState(() {
+        _totalMaterias = materias.length;
+      });
 
       return materias;
     } catch (e) {
@@ -104,6 +132,10 @@ class _FlowgramState extends State<Flowgram> {
 
   @override
   Widget build(BuildContext context) {
+    final porcentaje = _totalMaterias == 0
+        ? 0.0
+        : (_materiasAprobadas.length / _totalMaterias).clamp(0.0, 1.0).toDouble();
+
     return Container(
       color: Colors.white,
       child: SingleChildScrollView(
@@ -113,7 +145,6 @@ class _FlowgramState extends State<Flowgram> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Título
                 Text(
                   'Flujo de Materias',
                   style: GoogleFonts.poppins(
@@ -124,7 +155,6 @@ class _FlowgramState extends State<Flowgram> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Subtítulo
                 Text(
                   'Visualiza y gestiona tu progreso académico de manera intuitiva',
                   style: GoogleFonts.poppins(
@@ -135,7 +165,37 @@ class _FlowgramState extends State<Flowgram> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                // Contenedor visual del flujograma
+
+                // Barra de progreso circular
+                Column(
+                  children: [
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        SizedBox(
+                          width: 100,
+                          height: 100,
+                          child: CircularProgressIndicator(
+                            value: porcentaje.toDouble(),
+                            strokeWidth: 10,
+                            backgroundColor: Colors.grey.shade300,
+                            valueColor: const AlwaysStoppedAnimation<Color>(Colors.orange),
+                          ),
+                        ),
+                        Text(
+                          '${(porcentaje * 100).toStringAsFixed(0)}%',
+                          style: GoogleFonts.poppins(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+
+                // Contenedor de materias con columnas por trimestre
                 Container(
                   height: 600,
                   width: double.infinity,
@@ -150,169 +210,112 @@ class _FlowgramState extends State<Flowgram> {
                       ),
                     ],
                   ),
-                  child: FutureBuilder(
-                    future: _flujogramaData,
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) return const SizedBox.shrink();
-                      final materias = List<Map<String, dynamic>>.from(snapshot.data!['materias'] ?? []);
-                      return Stack(
-                        children: materias.map((materia) {
-                          final nombre = materia['nombre'] ?? '';
-                          final prereq = materia['prerrequisito'];
-                          final posX = (materia['posX'] ?? 0).toDouble();
-                          final posY = (materia['posY'] ?? 0).toDouble();
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: FutureBuilder<List<Map<String, dynamic>>>(
+                      future: _materiasDesdeUsuario,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
 
-                          return Positioned(
-                            left: posX,
-                            top: posY,
-                            child: prereq == null
-                                ? _materiaBox(nombre)
-                                : _materiaBoxConPrereq(nombre, prereq),
-                          );
-                        }).toList(),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 40),
-                // Materias dinámicas en columnas de 5
-                FutureBuilder<List<Map<String, dynamic>>>(
-                  future: _materiasDesdeUsuario,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const CircularProgressIndicator();
-                    }
+                        if (snapshot.hasError) {
+                          return Center(child: Text('Error: ${snapshot.error}'));
+                        }
 
-                    if (snapshot.hasError) {
-                      return Text('Error: ${snapshot.error}');
-                    }
+                        final materias = snapshot.data ?? [];
 
-                    final materias = snapshot.data ?? [];
+                        if (materias.isEmpty) {
+                          return const Center(child: Text('No se encontraron materias'));
+                        }
 
-                    if (materias.isEmpty) {
-                      return const Text('No se encontraron materias');
-                    }
+                        final columnas = <Widget>[];
 
-                    final columnas = <Widget>[];
-
-                    for (int i = 0; i < materias.length; i += 5) {
-                      final grupo = materias.skip(i).take(5).map((materia) {
-                        final nombre = materia['nombre'];
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: ElevatedButton(
-                            onPressed: () {},
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFF8FAFC),
-                              foregroundColor: const Color(0xFF1E293B),
-                              elevation: 0,
-                              side: const BorderSide(color: Color(0xFFE5E7EB)),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                        for (int i = 0; i < materias.length; i += 5) {
+                          final grupo = materias.skip(i).take(5).map((materia) {
+                            final nombre = materia['nombre'];
+                            final codigo = materia['codigo'];
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              child: SizedBox(
+                                width: 225,
+                                height: 70,
+                                child: ElevatedButton(
+                                  onPressed: () => _toggleMateriaAprobada(codigo),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _materiasAprobadas.contains(codigo)
+                                        ? Colors.orange
+                                        : const Color(0xFFF8FAFC),
+                                    foregroundColor: const Color(0xFF1E293B),
+                                    elevation: 0,
+                                    side: const BorderSide(color: Color(0xFFE5E7EB)),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    padding: const EdgeInsets.all(12),
+                                  ),
+                                  child: Text(
+                                    nombre,
+                                    softWrap: true,
+                                    overflow: TextOverflow.visible,
+                                    maxLines: null,
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                                  ),
+                                ),
                               ),
-                              minimumSize: const Size(250, 58),
-                            ),
-                            child: Text(
-                              nombre,
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
+                            );
+                          }).toList();
+                          columnas.add(Column(children: grupo));
+                        }
+
+                        final trimestres = [
+                          '1er Trimestre',
+                          '2do Trimestre',
+                          '3er Trimestre',
+                          '4to Trimestre',
+                          '5to Trimestre',
+                          '6to Trimestre',
+                          '7mo Trimestre',
+                          '8vo Trimestre',
+                          '9no Trimestre',
+                          '10mo Trimestre'
+                        ];
+
+                        return SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              for (int i = 0; i < columnas.length; i++) ...[
+                                if (i > 0) const SizedBox(width: 50),
+                                Column(
+                                  children: [
+                                    Text(
+                                      i < trimestres.length ? trimestres[i] : 'Trimestre ${i + 1}',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w600,
+                                        color: const Color(0xFF1E293B),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    columnas[i],
+                                  ],
+                                ),
+                              ]
+                            ],
                           ),
                         );
-                      }).toList();
-
-                      columnas.add(Column(children: grupo));
-                    }
-
-                    return SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: columnas
-                            .asMap()
-                            .entries
-                            .map((entry) => Padding(
-                          padding: EdgeInsets.only(left: entry.key * 270.0),
-                          child: entry.value,
-                        ))
-                            .toList(),
-                      ),
-                    );
-                  },
+                      },
+                    ),
+                  ),
                 ),
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _materiaBox(String nombre) {
-    return Container(
-      width: 250,
-      height: 58,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            nombre,
-            style: GoogleFonts.poppins(
-              color: const Color(0xFF1E293B),
-              fontSize: 16,
-              fontWeight: FontWeight.w400,
-              height: 1.5,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _materiaBoxConPrereq(String nombre, String prerrequisito) {
-    return Opacity(
-      opacity: 0.7,
-      child: Container(
-        width: 250,
-        height: 83,
-        decoration: BoxDecoration(
-          color: const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                nombre,
-                style: GoogleFonts.poppins(
-                  color: const Color(0xFF1E293B),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w400,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Prerrequisitos: $prerrequisito',
-                style: GoogleFonts.poppins(
-                  color: const Color(0xFF64748B),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                  height: 1.5,
-                ),
-              ),
-            ],
           ),
         ),
       ),
