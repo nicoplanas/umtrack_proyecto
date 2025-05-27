@@ -57,39 +57,44 @@ class _FlowgramState extends State<Flowgram> {
       if (baseUser is! StudentUser) throw Exception('El usuario no es estudiante');
       final student = baseUser as StudentUser;
 
-      final carreraDoc = await FirebaseFirestore.instance
-          .collection('carreras')
-          .doc(student.major)
+      // Paso 1: Obtener el flujograma asociado a su carrera
+      final carrerasDoc = await FirebaseFirestore.instance
+          .collection('carreras_pregrado')
+          .doc('sjs34UWA7WS5CzHyvRdc') // ID fijo basado en tu estructura
           .get();
 
-      final flujogramaId = carreraDoc.data()?['flujograma'];
-      if (flujogramaId == null) throw Exception('Carrera sin flujograma');
+      final flujogramaId = carrerasDoc.data()?['carreras']?[student.major]?['flujograma'];
+      if (flujogramaId == null) throw Exception('Flujograma no encontrado para esta carrera');
 
+      // Paso 2: Obtener materias del flujograma
       final flujogramaDoc = await FirebaseFirestore.instance
-          .collection('flujogramas')
-          .doc(flujogramaId)
-          .get();
+          .collection('flujogramas_pregrado')
+          .get(); // Usamos `.get()` porque el ID es dinámico
 
-      final raw = flujogramaDoc.data();
-      debugPrint('📄 Campos del flujograma: $raw');
+      final flujogramaMap = flujogramaDoc.docs.first.data()['flujogramas']?[flujogramaId];
+      if (flujogramaMap == null) throw Exception('No se encontraron materias en flujograma');
 
-      if (raw == null) throw Exception('Documento de flujograma vacío');
+      final materiaIds = flujogramaMap.keys.toList();
 
-      final materiasReferenciadas = raw.values.map((e) => e.toString()).toList();
-      debugPrint('🧩 Materias referenciadas: $materiasReferenciadas');
+      // Paso 3: Obtener info de materias
+      final materiasDoc = await FirebaseFirestore.instance
+          .collection('materias_pregrado')
+          .get(); // Solo hay un documento con todas
+
+      final materiasMap = materiasDoc.docs.first.data()['materias'];
 
       List<Map<String, dynamic>> materias = [];
-      for (final nombreMateria in materiasReferenciadas) {
-        final materiaDoc = await FirebaseFirestore.instance
-            .collection('materias')
-            .doc(nombreMateria)
-            .get();
-        if (materiaDoc.exists) {
-          materias.add({'nombre': materiaDoc.data()?['nombre'] ?? materiaDoc.id});
+
+      for (final id in materiaIds) {
+        if (materiasMap.containsKey(id)) {
+          final info = materiasMap[id];
+          materias.add({
+            'nombre': info['nombre'] ?? id,
+            'creditos': info['creditos'] ?? 0,
+          });
         }
       }
 
-      debugPrint('✅ Materias cargadas: ${materias.map((m) => m['nombre']).toList()}');
       return materias;
     } catch (e) {
       debugPrint('❌ Error al obtener materias: $e');

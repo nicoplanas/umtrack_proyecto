@@ -41,34 +41,30 @@ class _SignUpPageState extends State<SignUpPage> {
       _isLoadingCarreras = true;
     });
     try {
-      final snapshot = await _firestore.collection('carreras').get();
+      final snapshot = await _firestore
+          .collection('carreras_pregrado')
+          .doc('sjs34UWA7WS5CzHyvRdc') // ID fijo de tu documento
+          .get();
 
-      if (snapshot.docs.isEmpty) {
-        debugPrint('No hay carreras disponibles');
-        setState(() {
-          _carreras = [];
-        });
-        return;
+      final data = snapshot.data();
+      if (data == null || !data.containsKey('carreras')) {
+        throw Exception('No se encontró el mapa de carreras');
       }
 
-      final carreras = <String>[];
-
-      for (var doc in snapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        if (data.containsKey('nombre') && data['nombre'] != null) {
-          carreras.add(data['nombre'].toString());
-        } else {
-          debugPrint('Documento ${doc.id} no tiene campo nombre válido');
-        }
-      }
+      final carrerasMap = data['carreras'] as Map<String, dynamic>;
+      final carreras = carrerasMap.entries.map((entry) {
+        final code = entry.key;
+        final nombre = entry.value['nombre'] ?? code;
+        return '$code - $nombre';
+      }).toList();
 
       setState(() {
-        _carreras = carreras..sort(); // Ordena alfabéticamente
+        _carreras = carreras..sort(); // ej: ["ING-ME - Ingeniería Mecánica"]
       });
     } catch (e) {
       debugPrint('Error al cargar carreras: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al cargar carreras: $e')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error al cargar carreras: $e')));
       setState(() {
         _carreras = [];
       });
@@ -153,11 +149,13 @@ class _SignUpPageState extends State<SignUpPage> {
       };
 
       if (_tipoUsuario == 'estudiante') {
-        userData['major'] = _selectedCarrera!;
+        final carreraCode = _selectedCarrera!.split(' - ').first;
+        userData['major'] = carreraCode;
         userData['passedCourses'] = [];
         userData['dateOfEnrollment'] = now;
         userData['credits'] = 0;
-      } else if (_tipoUsuario == 'profesor') {
+      }
+      else if (_tipoUsuario == 'profesor') {
         userData['assignedCourses'] = [];
         userData['dateOfHiring'] = now;
       }
