@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../features/landing/views/landing_page.dart';
+import '../../features/career/views/career_page.dart';
 import '../../features/auth/views/login_page.dart';
 import '../../features/profile/views/profile_page.dart';
 import '../../features/profile/views/profile_settings_page.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Navbar extends StatelessWidget {
   final String email;
@@ -29,7 +31,7 @@ class Navbar extends StatelessWidget {
               // Logo
               Image.asset(
                 'assets/logo.png',
-                height: 120,
+                height: 70,
               ),
 
               // Nav items + buttons
@@ -42,7 +44,50 @@ class Navbar extends StatelessWidget {
                       MaterialPageRoute(builder: (context) => const LandingPage()),
                     );
                   }),
-                  _navItem('Mi carrera'),
+                  _navButton('Mi carrera', () async {
+                    final user = FirebaseAuth.instance.currentUser;
+                    if (user != null) {
+                      try {
+                        // Mostrar loading mientras se obtienen los datos
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (context) => const Center(child: CircularProgressIndicator()),
+                        );
+
+                        // Obtener datos del estudiante
+                        final DocumentSnapshot<Map<String, dynamic>> doc = await FirebaseFirestore.instance
+                            .collection('usuarios')
+                            .doc(user.uid)
+                            .get();
+
+                        Navigator.pop(context); // Cerrar loading
+
+                        if (doc.exists && doc.data()?['role'] == 'student') {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const CareerPage(),
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('No tienes una carrera asignada')),
+                          );
+                        }
+                      } catch (e) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error: $e')),
+                        );
+                      }
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Debes iniciar sesión')),
+                      );
+                    }
+                  }),
+
                   _navItem('Materias'),
                   const SizedBox(width: 20),
 
