@@ -11,29 +11,52 @@ class ProfileSettingsPage extends StatefulWidget {
 
 class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   final _formKey = GlobalKey<FormState>();
-  String _name = '';
-  String _email = '';
-  String _photoURL = '';
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _photoController = TextEditingController();
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+    _photoController.addListener(() {
+      setState(() {}); // Actualiza la vista previa cuando cambia la URL
+    });
+  }
+
+  Future<void> _loadUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    final userDoc = await FirebaseFirestore.instance
+        .collection('usuarios')
+        .doc(user?.uid)
+        .get();
+    final data = userDoc.data();
+    if (data != null) {
+      _nameController.text = data['fullName'] ?? '';
+      _emailController.text = data['email'] ?? '';
+      _photoController.text = data['profileImageUrl'] ?? '';
+    }
+    setState(() {
+      _isLoading = false;
+    });
+  }
 
   void _saveSettings() async {
     if (_formKey.currentState?.validate() ?? false) {
-      _formKey.currentState?.save();
       final user = FirebaseAuth.instance.currentUser;
 
       if (user != null) {
-        await user.updateDisplayName(_name);
-        await user.updateEmail(_email);
-
         await FirebaseFirestore.instance.collection('usuarios').doc(user.uid).set({
-          'fullName': _name,
-          'email': _email,
-          'profileImageUrl': _photoURL,
+          'fullName': _nameController.text,
+          'email': _emailController.text,
+          'profileImageUrl': _photoController.text,
         }, SetOptions(merge: true));
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Cambios guardados exitosamente')),
+          const SnackBar(content: Text('Cambios guardados')),
         );
+
         Navigator.pop(context);
       }
     }
@@ -41,12 +64,20 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 
   @override
   void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
     _photoController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Editar Perfil')),
       body: Padding(
@@ -55,37 +86,32 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           key: _formKey,
           child: ListView(
             children: [
-              Center(
-                child: CircleAvatar(
+              if (_photoController.text.isNotEmpty)
+                CircleAvatar(
                   radius: 50,
-                  backgroundImage: _photoURL.isNotEmpty
-                      ? NetworkImage(_photoURL)
-                      : const AssetImage('assets/placeholder.png') as ImageProvider,
+                  backgroundImage: NetworkImage(_photoController.text),
                 ),
-              ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               TextFormField(
+                controller: _nameController,
                 decoration: const InputDecoration(labelText: 'Nombre'),
-                onSaved: (value) => _name = value ?? '',
                 validator: (value) => value!.isEmpty ? 'Campo requerido' : null,
               ),
               TextFormField(
+                controller: _emailController,
                 decoration: const InputDecoration(labelText: 'Correo electrónico'),
-                onSaved: (value) => _email = value ?? '',
                 validator: (value) => value!.isEmpty ? 'Campo requerido' : null,
               ),
               TextFormField(
                 controller: _photoController,
                 decoration: const InputDecoration(labelText: 'URL de la foto de perfil'),
-                onChanged: (value) => setState(() => _photoURL = value),
-                onSaved: (value) => _photoURL = value ?? '',
                 validator: (value) => value!.isEmpty ? 'Campo requerido' : null,
               ),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _saveSettings,
                 child: const Text('Guardar cambios'),
-              )
+              ),
             ],
           ),
         ),
