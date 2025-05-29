@@ -40,7 +40,7 @@ abstract class BaseUser {
 /// Usuario tipo estudiante
 class StudentUser extends BaseUser {
   final String major;
-  final List<dynamic> passedCourses;
+  final Map<String, dynamic> passedCourses;
   final DateTime dateOfEnrollment;
   final int credits;
 
@@ -71,7 +71,7 @@ class StudentUser extends BaseUser {
     createdAt: _fromTimestampOrDate(json['createdAt']),
     lastLoginAt: _fromTimestampOrDate(json['lastLoginAt']),
     major: json['major'],
-    passedCourses: List<dynamic>.from(json['passedCourses']),
+    passedCourses: Map<String, dynamic>.from(json['passedCourses']),
     dateOfEnrollment: _fromTimestampOrDate(json['dateOfEnrollment']),
     credits: json['credits'],
   );

@@ -1,84 +1,87 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'profile_settings_page.dart'; // Asegúrate de que la ruta sea correcta
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:umtrack/features/profile/views/profile_settings_page.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+  State<ProfilePage> createState() => _ProfilePageState();
+}
 
-    final String name = user?.displayName ?? 'Usuario';
-    final String email = user?.email ?? 'Sin correo';
-    final String profileImageUrl = user?.photoURL ??
-        'https://via.placeholder.com/150';
+class _ProfilePageState extends State<ProfilePage> {
+  String name = '';
+  String email = '';
+  String photoURL = '';
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    final userDoc = await FirebaseFirestore.instance
+        .collection('usuarios')
+        .doc(user?.uid)
+        .get();
+    final data = userDoc.data();
+    setState(() {
+      name = data?['fullName'] ?? 'Usuario';
+      email = data?['email'] ?? 'Correo no disponible';
+      photoURL = data?['profileImageUrl'] ?? '';
+      isLoading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
-      backgroundColor: Colors.white, // Fondo blanco
-      appBar: AppBar(
-        backgroundColor: Colors.orange, // Naranja en AppBar
-        title: const Text('Mi Perfil'),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ProfileSettingsPage(),
-                ),
-              );
-            },
-          )
-        ],
-      ),
+      appBar: AppBar(title: const Text('Mi Perfil')),
       body: Center(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const SizedBox(height: 30),
             CircleAvatar(
               radius: 50,
-              backgroundImage: NetworkImage(profileImageUrl),
+              backgroundImage: photoURL.isNotEmpty
+                  ? NetworkImage(photoURL)
+                  : const AssetImage('assets/default_avatar.png') as ImageProvider,
             ),
             const SizedBox(height: 20),
-            Text(
-              name,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.black, // Texto negro para contraste
-              ),
-            ),
+            Text(name, style: const TextStyle(fontSize: 24)),
             const SizedBox(height: 8),
-            Text(
-              email,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 30),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange, // Botón naranja
-              ),
+            Text(email),
+            const SizedBox(height: 20),
+            ElevatedButton(
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => const ProfileSettingsPage(),
                   ),
-                );
+                ).then((_) => _loadUserData());
               },
-              icon: const Icon(Icons.edit),
-              label: const Text(
-                'Editar Perfil',
-                style: TextStyle(color: Colors.white), // Texto blanco
-              ),
+              child: const Text('Editar perfil'),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () async {
+                await FirebaseAuth.instance.currentUser?.delete();
+                Navigator.of(context).popUntil((r) => r.isFirst);
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Eliminar cuenta'),
             ),
           ],
         ),
@@ -86,3 +89,5 @@ class ProfilePage extends StatelessWidget {
     );
   }
 }
+
+//holaaaaaaaaaaaaa
