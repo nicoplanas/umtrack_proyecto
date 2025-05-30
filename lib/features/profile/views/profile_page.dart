@@ -77,8 +77,22 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () async {
-                await FirebaseAuth.instance.currentUser?.delete();
-                Navigator.of(context).popUntil((r) => r.isFirst);
+                final user = FirebaseAuth.instance.currentUser;
+                if (user != null) {
+                  final uid = user.uid;
+
+                  // Eliminar de Firestore
+                  await FirebaseFirestore.instance
+                      .collection('usuarios')
+                      .doc(uid)
+                      .delete();
+
+                  // Eliminar de Authentication
+                  await user.delete();
+
+                  // Regresar al inicio
+                  Navigator.of(context).popUntil((r) => r.isFirst);
+                }
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
               child: const Text('Eliminar cuenta'),
@@ -89,5 +103,3 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 }
-
-//holaaaaaaaaaaaaa
