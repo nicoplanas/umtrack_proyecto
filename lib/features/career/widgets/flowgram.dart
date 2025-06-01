@@ -22,7 +22,7 @@ enum SelectionMode {
 class _FlowgramState extends State<Flowgram> {
   late Future<List<Map<String, dynamic>>> _materiasDesdeUsuario;
   Set<String> _materiasAprobadas = {};
-  Set<String> _materiasTrimestreActual = {};
+  final Set<String> _materiasTrimestreActual = {};
   int _totalMaterias = 0;
   int _totalCreditos = 0;
 
@@ -133,7 +133,7 @@ class _FlowgramState extends State<Flowgram> {
 
       final baseUser = await userFromDocument(usuarioDoc);
       if (baseUser is! StudentUser) throw Exception('El usuario no es estudiante');
-      final student = baseUser as StudentUser;
+      final student = baseUser;
 
       final carreraDoc = await FirebaseFirestore.instance
           .collection('carreras_pregrado')

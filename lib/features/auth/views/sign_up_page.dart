@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '/features/auth/models/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '/features/landing/views/landing_page.dart';
 
