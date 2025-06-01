@@ -117,7 +117,7 @@ class Navbar extends StatelessWidget {
       child: Text(
         title,
         style: GoogleFonts.inter(
-          color: const Color(0xFF999999),
+          color: Colors.black,
           fontSize: 16,
         ),
       ),
@@ -130,7 +130,7 @@ class Navbar extends StatelessWidget {
       child: Text(
         text,
         style: GoogleFonts.inter(
-          color: const Color(0xFF999999),
+          color: Colors.black,
           fontSize: 16,
         ),
       ),

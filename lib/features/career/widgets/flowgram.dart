@@ -24,6 +24,7 @@ class _FlowgramState extends State<Flowgram> {
   Set<String> _materiasAprobadas = {};
   Set<String> _materiasTrimestreActual = {};
   int _totalMaterias = 0;
+  int _totalCreditos = 0;
 
   SelectionMode _selectionMode = SelectionMode.none;
 
@@ -54,8 +55,8 @@ class _FlowgramState extends State<Flowgram> {
     }
   }
 
-  Future<void> _toggleMateriaAprobada(String codigo) async {
-    final user = FirebaseAuth.instance.currentUser;
+  Future<void> _toggleMateriaAprobada(String codigo, int creditos) async {
+    final user = FirebaseAuth.instance.currentUser ;
     if (user == null) return;
 
     final ref = FirebaseFirestore.instance.collection('usuarios').doc(user.uid);
@@ -68,6 +69,7 @@ class _FlowgramState extends State<Flowgram> {
       });
       setState(() {
         _materiasAprobadas.remove(codigo);
+        _totalCreditos -= creditos; // Restar créditos
       });
     } else {
       await ref.update({
@@ -75,6 +77,7 @@ class _FlowgramState extends State<Flowgram> {
       });
       setState(() {
         _materiasAprobadas.add(codigo);
+        _totalCreditos += creditos; // Sumar créditos
       });
     }
   }
@@ -179,6 +182,7 @@ class _FlowgramState extends State<Flowgram> {
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     final porcentaje = _totalMaterias == 0
@@ -192,8 +196,9 @@ class _FlowgramState extends State<Flowgram> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+
                 Text(
                   'Flujo de Materias',
                   style: GoogleFonts.poppins(
@@ -258,12 +263,71 @@ class _FlowgramState extends State<Flowgram> {
                           count: _materiasTrimestreActual.length,
                           mode: SelectionMode.current,
                         ),
+
+                        const SizedBox(height: 12),
+                        // Botón para total de créditos con estilo personalizado
+                        InkWell(
+                          onTap: () {}, // Si quieres puedes agregar funcionalidad, o quitar onTap
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(color: Colors.black),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.grade, color: Colors.black, size: 16), // Ícono neutro o distinto
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Créditos Aprobados: $_totalCreditos',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Cantidad de materias: $_totalMaterias',
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF1E293B),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
                       ],
                     ),
                   ],
                 ),
-
+                const SizedBox(height: 30),
                 // Contenedor de materias con columnas por trimestre
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x22000000),
+                        offset: Offset(0, 2),
+                        blurRadius: 6,
+                      ),
+                    ],
+                  ),
+
+                ),
+
+                const SizedBox(height: 30),
+
                 Container(
                   height: 600,
                   width: double.infinity,
@@ -303,6 +367,7 @@ class _FlowgramState extends State<Flowgram> {
                           final grupo = materias.skip(i).take(5).map((materia) {
                             final nombre = materia['nombre'];
                             final codigo = materia['codigo'];
+                            final creditos = materia['creditos'];
                             return Padding(
                               padding: const EdgeInsets.symmetric(vertical: 6),
                               child: SizedBox(
@@ -310,7 +375,9 @@ class _FlowgramState extends State<Flowgram> {
                                 height: 70,
                                 child: ElevatedButton(
                                     onPressed: () {
+                                      final creditos = int.parse(materia['creditos'].toString());
                                       if (_selectionMode == SelectionMode.approved) {
+                                        _toggleMateriaAprobada(codigo, creditos);
                                         setState(() {
                                           if (_materiasAprobadas.contains(codigo)) {
                                             _materiasAprobadas.remove(codigo);
@@ -322,10 +389,13 @@ class _FlowgramState extends State<Flowgram> {
                                         setState(() {
                                           if (_materiasTrimestreActual.contains(codigo)) {
                                             _materiasTrimestreActual.remove(codigo);
+
                                           } else {
                                             _materiasTrimestreActual.add(codigo);
+
                                           }
                                         });
+
                                       }
                                     },
                                   style: ElevatedButton.styleFrom(
