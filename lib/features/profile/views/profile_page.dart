@@ -96,13 +96,15 @@ class _ProfilePageState extends State<ProfilePage> {
             Text(email),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
+
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => const ProfileSettingsPage(),
                   ),
                 ).then((_) => _loadUserData());
+
               },
               child: const Text('Editar perfil'),
             ),
