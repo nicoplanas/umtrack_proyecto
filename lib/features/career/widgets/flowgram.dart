@@ -303,6 +303,19 @@ class _FlowgramState extends State<Flowgram> {
                             ),
                           ),
                         ),
+                        const SizedBox(height: 4),
+                        // 🔹AGREGADO: Mostrar materias por cursar
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Materias por cursar: ${_totalMaterias - _materiasAprobadas.length}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w400,
+                              color: Colors.redAccent,
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 8),
                       ],
                     ),
