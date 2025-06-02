@@ -15,7 +15,7 @@ class AuthService {
     required String password,
     required DateTime birthday,
     String? major, // para estudiantes
-    List<dynamic>? passedCourses, // para estudiantes
+    Map<String, dynamic>? passedCourses, // para estudiantes
     DateTime? dateOfEnrollment,// para estudiantes
     List<dynamic>? assignedCourses, // para profesores
     DateTime? dateOfHiring,// para profesores
@@ -43,7 +43,7 @@ class AuthService {
           createdAt: now,
           lastLoginAt: now,
           major: major ?? '',
-          passedCourses: passedCourses ?? [],
+          passedCourses: passedCourses ?? {},
           dateOfEnrollment: dateOfEnrollment ?? now,
           credits: credits ?? 0
       );

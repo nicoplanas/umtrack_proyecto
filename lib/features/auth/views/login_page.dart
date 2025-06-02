@@ -120,6 +120,7 @@ class LoginScreen extends StatelessWidget {
                         hintText: "Enter your email",
                         filled: true,
                         fillColor: Colors.orange.shade50,
+                        hintStyle: const TextStyle(color: Colors.grey),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
                           borderSide: BorderSide(color: Colors.orange.withOpacity(0.5)),
@@ -129,6 +130,7 @@ class LoginScreen extends StatelessWidget {
                           borderSide: BorderSide(color: Colors.orange, width: 2),
                         ),
                       ),
+                      style: const TextStyle(color: Colors.black),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Email is required';
@@ -153,6 +155,7 @@ class LoginScreen extends StatelessWidget {
                         hintText: "Enter your password",
                         filled: true,
                         fillColor: Colors.orange.shade50,
+                        hintStyle: const TextStyle(color: Colors.grey),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
                           borderSide: BorderSide(color: Colors.orange.withOpacity(0.5)),
@@ -162,6 +165,7 @@ class LoginScreen extends StatelessWidget {
                           borderSide: BorderSide(color: Colors.orange, width: 2),
                         ),
                       ),
+                      style: const TextStyle(color: Colors.black),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Password is required';
