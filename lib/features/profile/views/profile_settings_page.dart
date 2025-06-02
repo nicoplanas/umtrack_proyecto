@@ -1,4 +1,9 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -13,16 +18,16 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _photoController = TextEditingController();
+  String? _photoUrl;
   bool _isLoading = true;
+  bool _isUploadingImage = false;
+
+  final String imgbbApiKey = '7afcb4a264a098ae15c3e660daed2b55';
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
-    _photoController.addListener(() {
-      setState(() {}); // Actualiza la vista previa cuando cambia la URL
-    });
   }
 
   Future<void> _loadUserData() async {
@@ -35,11 +40,42 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     if (data != null) {
       _nameController.text = data['fullName'] ?? '';
       _emailController.text = data['email'] ?? '';
-      _photoController.text = data['profileImageUrl'] ?? '';
+      _photoUrl = data['profileImageUrl'];
     }
     setState(() {
       _isLoading = false;
     });
+  }
+
+  Future<void> _pickAndUploadImage() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: ImageSource.gallery);
+    if (image == null) return;
+
+    setState(() => _isUploadingImage = true);
+
+    final bytes = await image.readAsBytes();
+    final base64Image = base64Encode(bytes);
+
+    final response = await http.post(
+      Uri.parse('https://api.imgbb.com/1/upload?key=$imgbbApiKey'),
+      body: {
+        'image': base64Image,
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      setState(() {
+        _photoUrl = data['data']['url'];
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error al subir la imagen')),
+      );
+    }
+
+    setState(() => _isUploadingImage = false);
   }
 
   void _saveSettings() async {
@@ -50,7 +86,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
         await FirebaseFirestore.instance.collection('usuarios').doc(user.uid).set({
           'fullName': _nameController.text,
           'email': _emailController.text,
-          'profileImageUrl': _photoController.text,
+          'profileImageUrl': _photoUrl,
         }, SetOptions(merge: true));
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -66,7 +102,6 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _photoController.dispose();
     super.dispose();
   }
 
@@ -86,11 +121,18 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           key: _formKey,
           child: ListView(
             children: [
-              if (_photoController.text.isNotEmpty)
+              if (_photoUrl != null)
                 CircleAvatar(
                   radius: 50,
-                  backgroundImage: NetworkImage(_photoController.text),
+                  backgroundImage: NetworkImage(_photoUrl!),
                 ),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: _isUploadingImage ? null : _pickAndUploadImage,
+                child: _isUploadingImage
+                    ? const CircularProgressIndicator()
+                    : const Text('Cambiar foto de perfil'),
+              ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _nameController,
@@ -100,11 +142,6 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
               TextFormField(
                 controller: _emailController,
                 decoration: const InputDecoration(labelText: 'Correo electrónico'),
-                validator: (value) => value!.isEmpty ? 'Campo requerido' : null,
-              ),
-              TextFormField(
-                controller: _photoController,
-                decoration: const InputDecoration(labelText: 'URL de la foto de perfil'),
                 validator: (value) => value!.isEmpty ? 'Campo requerido' : null,
               ),
               const SizedBox(height: 20),
@@ -119,7 +156,6 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     );
   }
 }
-
 
 
 

@@ -37,6 +37,38 @@ class _ProfilePageState extends State<ProfilePage> {
     });
   }
 
+  Future<void> _confirmAndDelete() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Estás seguro?'),
+        content: const Text('Esta acción eliminará tu cuenta permanentemente.'),
+        actions: [
+          TextButton(
+            child: const Text('Cancelar'),
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          TextButton(
+            child: const Text('Eliminar'),
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final uid = user.uid;
+
+        await FirebaseFirestore.instance.collection('usuarios').doc(uid).delete();
+        await user.delete();
+
+        Navigator.of(context).popUntil((r) => r.isFirst);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -76,10 +108,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () async {
-                await FirebaseAuth.instance.currentUser?.delete();
-                Navigator.of(context).popUntil((r) => r.isFirst);
-              },
+              onPressed: _confirmAndDelete,
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
               child: const Text('Eliminar cuenta'),
             ),
@@ -89,5 +118,3 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 }
-
-//holaaaaaaaaaaaaa
