@@ -13,10 +13,21 @@ class Flowgram extends StatefulWidget {
   State<Flowgram> createState() => _FlowgramState();
 }
 
+enum SelectionMode {
+  none,
+  approved,  // verde
+  current,   // amarillo
+}
+
 class _FlowgramState extends State<Flowgram> {
   late Future<List<Map<String, dynamic>>> _materiasDesdeUsuario;
   Set<String> _materiasAprobadas = {};
+  final Set<String> _materiasTrimestreActual = {};
   int _totalMaterias = 0;
+  int _totalCreditos = 0;
+
+  SelectionMode _selectionMode = SelectionMode.none;
+
 
   @override
   void initState() {
@@ -44,8 +55,8 @@ class _FlowgramState extends State<Flowgram> {
     }
   }
 
-  Future<void> _toggleMateriaAprobada(String codigo) async {
-    final user = FirebaseAuth.instance.currentUser;
+  Future<void> _toggleMateriaAprobada(String codigo, int creditos) async {
+    final user = FirebaseAuth.instance.currentUser ;
     if (user == null) return;
 
     final ref = FirebaseFirestore.instance.collection('usuarios').doc(user.uid);
@@ -58,6 +69,7 @@ class _FlowgramState extends State<Flowgram> {
       });
       setState(() {
         _materiasAprobadas.remove(codigo);
+        _totalCreditos -= creditos; // Restar créditos
       });
     } else {
       await ref.update({
@@ -65,8 +77,48 @@ class _FlowgramState extends State<Flowgram> {
       });
       setState(() {
         _materiasAprobadas.add(codigo);
+        _totalCreditos += creditos; // Sumar créditos
       });
     }
+  }
+
+  Widget _buildLegendButton({
+    required Color color,
+    required String text,
+    required int count,
+    required SelectionMode mode,
+  }) {
+    final isSelected = _selectionMode == mode;
+
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectionMode = isSelected ? SelectionMode.none : mode;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.2) : Colors.transparent,
+          border: Border.all(color: color),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.circle, color: color, size: 16),
+            const SizedBox(width: 8),
+            Text(
+              '$text: $count',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                color: const Color(0xFF1E293B),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<List<Map<String, dynamic>>> _cargarMateriasDesdeFlujogramaCompuesto() async {
@@ -81,7 +133,7 @@ class _FlowgramState extends State<Flowgram> {
 
       final baseUser = await userFromDocument(usuarioDoc);
       if (baseUser is! StudentUser) throw Exception('El usuario no es estudiante');
-      final student = baseUser as StudentUser;
+      final student = baseUser;
 
       final carreraDoc = await FirebaseFirestore.instance
           .collection('carreras_pregrado')
@@ -130,6 +182,7 @@ class _FlowgramState extends State<Flowgram> {
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     final porcentaje = _totalMaterias == 0
@@ -143,8 +196,9 @@ class _FlowgramState extends State<Flowgram> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+
                 Text(
                   'Flujo de Materias',
                   style: GoogleFonts.poppins(
@@ -167,7 +221,8 @@ class _FlowgramState extends State<Flowgram> {
                 const SizedBox(height: 32),
 
                 // Barra de progreso circular
-                Column(
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Stack(
                       alignment: Alignment.center,
@@ -175,15 +230,15 @@ class _FlowgramState extends State<Flowgram> {
                         SizedBox(
                           width: 100,
                           height: 100,
-                          child: CircularProgressIndicator(
-                            value: porcentaje.toDouble(),
-                            strokeWidth: 10,
-                            backgroundColor: Colors.grey.shade300,
-                            valueColor: const AlwaysStoppedAnimation<Color>(Colors.orange),
+                          child: CustomPaint(
+                            painter: DualProgressPainter(
+                              approvedFraction: _totalMaterias == 0 ? 0 : _materiasAprobadas.length / _totalMaterias,
+                              currentFraction: _totalMaterias == 0 ? 0 : _materiasTrimestreActual.length / _totalMaterias,
+                            ),
                           ),
                         ),
                         Text(
-                          '${(porcentaje * 100).toStringAsFixed(0)}%',
+                          '${((_materiasAprobadas.length + _materiasTrimestreActual.length) / _totalMaterias * 100).toStringAsFixed(0)}%',
                           style: GoogleFonts.poppins(
                             fontSize: 20,
                             fontWeight: FontWeight.w600,
@@ -191,11 +246,101 @@ class _FlowgramState extends State<Flowgram> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(width: 40),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildLegendButton(
+                          color: Colors.green,
+                          text: 'Materias Aprobadas',
+                          count: _materiasAprobadas.length,
+                          mode: SelectionMode.approved,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildLegendButton(
+                          color: Colors.yellow[700]!,
+                          text: 'Materias Trimestre-actual',
+                          count: _materiasTrimestreActual.length,
+                          mode: SelectionMode.current,
+                        ),
+
+                        const SizedBox(height: 12),
+                        // Botón para total de créditos con estilo personalizado
+                        InkWell(
+                          onTap: () {}, // Si quieres puedes agregar funcionalidad, o quitar onTap
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(color: Colors.black),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.grade, color: Colors.black, size: 16), // Ícono neutro o distinto
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Créditos Aprobados: $_totalCreditos',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Cantidad de materias: $_totalMaterias',
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF1E293B),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        // 🔹AGREGADO: Mostrar materias por cursar
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Materias por cursar: ${_totalMaterias - _materiasAprobadas.length}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w400,
+                              color: Colors.redAccent,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                    ),
                   ],
                 ),
-
+                const SizedBox(height: 30),
                 // Contenedor de materias con columnas por trimestre
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x22000000),
+                        offset: Offset(0, 2),
+                        blurRadius: 6,
+                      ),
+                    ],
+                  ),
+
+                ),
+
+                const SizedBox(height: 30),
+
                 Container(
                   height: 600,
                   width: double.infinity,
@@ -235,16 +380,42 @@ class _FlowgramState extends State<Flowgram> {
                           final grupo = materias.skip(i).take(5).map((materia) {
                             final nombre = materia['nombre'];
                             final codigo = materia['codigo'];
+                            final creditos = materia['creditos'];
                             return Padding(
                               padding: const EdgeInsets.symmetric(vertical: 6),
                               child: SizedBox(
                                 width: 225,
                                 height: 70,
                                 child: ElevatedButton(
-                                  onPressed: () => _toggleMateriaAprobada(codigo),
+                                    onPressed: () {
+                                      final creditos = int.parse(materia['creditos'].toString());
+                                      if (_selectionMode == SelectionMode.approved) {
+                                        _toggleMateriaAprobada(codigo, creditos);
+                                        setState(() {
+                                          if (_materiasAprobadas.contains(codigo)) {
+                                            _materiasAprobadas.remove(codigo);
+                                          } else {
+                                            _materiasAprobadas.add(codigo);
+                                          }
+                                        });
+                                      } else if (_selectionMode == SelectionMode.current) {
+                                        setState(() {
+                                          if (_materiasTrimestreActual.contains(codigo)) {
+                                            _materiasTrimestreActual.remove(codigo);
+
+                                          } else {
+                                            _materiasTrimestreActual.add(codigo);
+
+                                          }
+                                        });
+
+                                      }
+                                    },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: _materiasAprobadas.contains(codigo)
-                                        ? Colors.orange
+                                        ? Colors.green
+                                        : _materiasTrimestreActual.contains(codigo)
+                                        ? Colors.yellow[700]
                                         : const Color(0xFFF8FAFC),
                                     foregroundColor: const Color(0xFF1E293B),
                                     elevation: 0,
@@ -321,4 +492,60 @@ class _FlowgramState extends State<Flowgram> {
       ),
     );
   }
+}
+
+class DualProgressPainter extends CustomPainter {
+  final double approvedFraction;
+  final double currentFraction;
+
+  DualProgressPainter({
+    required this.approvedFraction,
+    required this.currentFraction,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const strokeWidth = 10.0;
+    final rect = Offset.zero & size;
+    final center = rect.center;
+    final radius = size.width / 2 - strokeWidth / 2;
+
+    final backgroundPaint = Paint()
+      ..color = Colors.grey.shade300
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final approvedPaint = Paint()
+      ..color = Colors.green
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final currentPaint = Paint()
+      ..color = Colors.yellow[700]!
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawCircle(center, radius, backgroundPaint);
+
+    final totalAngle = 2 * 3.141592653589793;
+    final approvedAngle = totalAngle * approvedFraction;
+    final currentAngle = totalAngle * currentFraction;
+
+    double startAngle = -3.141592653589793 / 2;
+    if (approvedFraction > 0) {
+      canvas.drawArc(Rect.fromCircle(center: center, radius: radius),
+          startAngle, approvedAngle, false, approvedPaint);
+      startAngle += approvedAngle;
+    }
+
+    if (currentFraction > 0) {
+      canvas.drawArc(Rect.fromCircle(center: center, radius: radius),
+          startAngle, currentAngle, false, currentPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
