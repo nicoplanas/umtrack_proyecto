@@ -40,27 +40,19 @@ class _SignUpPageState extends State<SignUpPage> {
     setState(() {
       _isLoadingCarreras = true;
     });
+
     try {
-      final snapshot = await _firestore
-          .collection('carreras_pregrado')
-          .doc('sjs34UWA7WS5CzHyvRdc')
-          .get();
-
-      final data = snapshot.data();
-      if (data == null || !data.containsKey('carreras')) {
-        throw Exception('No se encontró el mapa de carreras');
-      }
-
-      final carrerasMap = data['carreras'] as Map<String, dynamic>;
+      final querySnapshot = await _firestore.collection('carreras').get();
 
       final Map<String, String> nombreToCodigo = {};
       final List<String> nombresVisibles = [];
 
-      carrerasMap.forEach((codigo, contenido) {
-        final nombre = contenido['nombre'] ?? codigo;
-        nombreToCodigo[nombre] = codigo;
+      for (final doc in querySnapshot.docs) {
+        final data = doc.data();
+        final nombre = data['nombre'] ?? doc.id;
+        nombreToCodigo[nombre] = doc.id;
         nombresVisibles.add(nombre);
-      });
+      }
 
       setState(() {
         _carrerasMap = nombreToCodigo;
@@ -68,8 +60,9 @@ class _SignUpPageState extends State<SignUpPage> {
       });
     } catch (e) {
       debugPrint('Error al cargar carreras: $e');
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error al cargar carreras: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al cargar carreras: $e')),
+      );
       setState(() {
         _carrerasMap = {};
         _carrerasVisibles = [];
@@ -160,6 +153,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
         userData['major'] = carreraCode;
         userData['passedCourses'] = {}; // <-- mapa vacío
+        userData['currentCourses'] = {};
         userData['dateOfEnrollment'] = now;
         userData['credits'] = 0;
       } else if (_tipoUsuario == 'profesor') {

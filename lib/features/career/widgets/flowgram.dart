@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '/features/auth/models/user_model.dart';
 
 class Flowgram extends StatefulWidget {
   final String carreraId;
@@ -22,21 +21,87 @@ enum SelectionMode {
 class _FlowgramState extends State<Flowgram> {
   late Future<List<Map<String, dynamic>>> _materiasDesdeUsuario;
   Set<String> _materiasAprobadas = {};
+  Map<String, int> _notasAprobadas = {};
+
   final Set<String> _materiasTrimestreActual = {};
   int _totalMaterias = 0;
   int _totalCreditos = 0;
 
   SelectionMode _selectionMode = SelectionMode.none;
 
-
   @override
   void initState() {
     super.initState();
     _materiasDesdeUsuario = _cargarMateriasDesdeFlujogramaCompuesto();
     _obtenerMateriasAprobadas();
+    _obtenerMateriasTrimestreActual();
+  }
+
+  Future<int?> _solicitarNotaFinal(BuildContext context, String codigo) async {
+    final TextEditingController _notaController = TextEditingController();
+
+    return showDialog<int>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Nota final'),
+          content: TextField(
+            controller: _notaController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Ingrese la nota...',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(null),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () {
+                final text = _notaController.text.trim();
+                final nota = int.tryParse(text);
+                if (nota != null && nota >= 0 && nota <= 20) {
+                  Navigator.of(context).pop(nota);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Ingrese una nota válida entre 0 y 20')),
+                  );
+                }
+              },
+              child: const Text('Guardar'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _obtenerMateriasAprobadas() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final userDoc = await FirebaseFirestore.instance.collection('usuarios').doc(user.uid).get();
+    final data = userDoc.data();
+    if (data == null) return;
+
+    final passed = data['passedCourses'];
+    if (passed == null || passed is! Map<String, dynamic>) return;
+
+    final Map<String, int> aprobadasConNotas = {};
+    passed.forEach((codigo, info) {
+      if (info is Map && info.containsKey('nota')) {
+        aprobadasConNotas[codigo] = info['nota'];
+      }
+    });
+
+    setState(() {
+      _materiasAprobadas = aprobadasConNotas.keys.toSet();
+      _notasAprobadas = aprobadasConNotas;
+    });
+  }
+
+  Future<void> _obtenerMateriasTrimestreActual() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
@@ -46,38 +111,111 @@ class _FlowgramState extends State<Flowgram> {
         .get();
 
     final data = usuarioDoc.data();
-    final passed = data?['passedCourses'] as Map<String, dynamic>?;
+    final current = data?['currentCourses'] as Map<String, dynamic>?;
 
-    if (passed != null) {
+    if (current != null) {
       setState(() {
-        _materiasAprobadas = passed.keys.toSet();
+        _materiasTrimestreActual.clear();
+        _materiasTrimestreActual.addAll(current.keys);
       });
     }
   }
 
+  double? _calcularPromedioNotas() {
+    if (_notasAprobadas.isEmpty) return null;
+    final total = _notasAprobadas.values.reduce((a, b) => a + b);
+    return total / _notasAprobadas.length;
+  }
+
   Future<void> _toggleMateriaAprobada(String codigo, int creditos) async {
-    final user = FirebaseAuth.instance.currentUser ;
+    final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
     final ref = FirebaseFirestore.instance.collection('usuarios').doc(user.uid);
-
     final yaAprobada = _materiasAprobadas.contains(codigo);
 
     if (yaAprobada) {
-      await ref.update({
-        'passedCourses.$codigo': FieldValue.delete(),
-      });
+      // La estás removiendo de materias aprobadas (regresa a cursando o ninguna)
+      await ref.set({
+        'passedCourses': {codigo: FieldValue.delete()},
+        'credits': FieldValue.increment(-creditos),
+      }, SetOptions(merge: true));
+
       setState(() {
         _materiasAprobadas.remove(codigo);
-        _totalCreditos -= creditos; // Restar créditos
+        _notasAprobadas.remove(codigo);
+        _totalCreditos -= creditos;
       });
     } else {
-      await ref.update({
-        'passedCourses.$codigo': codigo,
-      });
+      final nota = await _solicitarNotaFinal(context, codigo);
+      if (nota == null) return;
+
+      // La estás agregando como materia aprobada, eliminarla de cursando y sumar créditos
+      await ref.set({
+        'passedCourses': {
+          codigo: {
+            'codigo': codigo,
+            'nota': nota,
+          }
+        },
+        'currentCourses': {codigo: FieldValue.delete()},
+        'credits': FieldValue.increment(creditos),
+      }, SetOptions(merge: true));
+
       setState(() {
         _materiasAprobadas.add(codigo);
-        _totalCreditos += creditos; // Sumar créditos
+        _materiasTrimestreActual.remove(codigo);
+        _notasAprobadas[codigo] = nota;
+        _totalCreditos += creditos;
+      });
+
+      await _obtenerMateriasAprobadas();
+    }
+  }
+
+  Future<void> _toggleMateriaActual(String codigo) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final ref = FirebaseFirestore.instance.collection('usuarios').doc(user.uid);
+    final yaEsta = _materiasTrimestreActual.contains(codigo);
+    const creditos = 3; // O cámbialo si usas créditos dinámicos
+
+    if (yaEsta) {
+      await ref.set({
+        'currentCourses': {codigo: FieldValue.delete()}
+      }, SetOptions(merge: true));
+
+      setState(() {
+        _materiasTrimestreActual.remove(codigo);
+      });
+    } else {
+      final estabaAprobada = _materiasAprobadas.contains(codigo);
+
+      final batch = FirebaseFirestore.instance.batch();
+
+      if (estabaAprobada) {
+        // Si estaba en aprobadas, la removemos y restamos créditos
+        batch.set(ref, {
+          'passedCourses': {codigo: FieldValue.delete()},
+          'credits': FieldValue.increment(-creditos)
+        }, SetOptions(merge: true));
+      }
+
+      // La añadimos a currentCourses
+      batch.set(ref, {
+        'currentCourses': {codigo: codigo}
+      }, SetOptions(merge: true));
+
+      await batch.commit();
+
+      setState(() {
+        _materiasTrimestreActual.add(codigo);
+        if (estabaAprobada) {
+          _materiasAprobadas.remove(codigo);
+          _notasAprobadas.remove(codigo);
+          _totalCreditos -= creditos;
+        }
       });
     }
   }
@@ -131,42 +269,47 @@ class _FlowgramState extends State<Flowgram> {
           .doc(user.uid)
           .get();
 
-      final baseUser = await userFromDocument(usuarioDoc);
-      if (baseUser is! StudentUser) throw Exception('El usuario no es estudiante');
-      final student = baseUser;
+      final carreraId = usuarioDoc.data()?['major'];
+      if (carreraId == null || carreraId == 'Sin carrera') {
+        throw Exception('⚠️ El usuario no tiene carrera asignada.');
+      }
 
       final carreraDoc = await FirebaseFirestore.instance
-          .collection('carreras_pregrado')
-          .doc('sjs34UWA7WS5CzHyvRdc')
+          .collection('carreras')
+          .doc(carreraId)
           .get();
 
-      final flujogramaId = carreraDoc.data()?['carreras']?[student.major]?['flujograma'];
-      if (flujogramaId == null) throw Exception('Carrera sin flujograma');
+      final flujogramaId = carreraDoc.data()?['flujograma'];
+      if (flujogramaId == null) throw Exception('⚠️ No se encontró flujograma para $carreraId');
 
       final flujogramaDoc = await FirebaseFirestore.instance
-          .collection('flujogramas_pregrado')
+          .collection('flujogramas')
+          .doc(flujogramaId)
           .get();
 
-      final flujogramaMap = flujogramaDoc.docs.first.data()['flujogramas']?[flujogramaId];
-      if (flujogramaMap == null) throw Exception('No se encontraron materias en flujograma');
+      final materiaCodigos = flujogramaDoc.data()?.keys.toList();
+      if (materiaCodigos == null || materiaCodigos.isEmpty) {
+        throw Exception('⚠️ Flujograma vacío para $flujogramaId');
+      }
 
-      final materiaIds = flujogramaMap.keys.toList();
+      final firestore = FirebaseFirestore.instance;
 
-      final materiasDoc = await FirebaseFirestore.instance
-          .collection('materias_pregrado')
-          .get();
+      final refs = materiaCodigos
+          .map((codigo) => firestore.collection('materias').doc(codigo))
+          .toList();
 
-      final materiasMap = materiasDoc.docs.first.data()['materias'];
+      final snapshots = await Future.wait(refs.map((ref) => ref.get()));
 
-      List<Map<String, dynamic>> materias = [];
+      final materias = <Map<String, dynamic>>[];
 
-      for (final id in materiaIds) {
-        if (materiasMap.containsKey(id)) {
-          final info = materiasMap[id];
+      for (final snap in snapshots) {
+        if (snap.exists) {
+          final data = snap.data()!;
           materias.add({
-            'codigo': id,
-            'nombre': info['nombre'] ?? id,
-            'creditos': info['creditos'] ?? 0,
+            'codigo': snap.id,
+            'nombre': data['nombre'] ?? snap.id,
+            'creditos': data['creditos'] ?? 0,
+            'prerequisitos': data['prerequisitos'] ?? [],
           });
         }
       }
@@ -177,11 +320,10 @@ class _FlowgramState extends State<Flowgram> {
 
       return materias;
     } catch (e) {
-      debugPrint('❌ Error al obtener materias: $e');
+      debugPrint('❌ Error al cargar materias: $e');
       return [];
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -233,12 +375,12 @@ class _FlowgramState extends State<Flowgram> {
                           child: CustomPaint(
                             painter: DualProgressPainter(
                               approvedFraction: _totalMaterias == 0 ? 0 : _materiasAprobadas.length / _totalMaterias,
-                              currentFraction: _totalMaterias == 0 ? 0 : _materiasTrimestreActual.length / _totalMaterias,
+                              currentFraction: 0,
                             ),
                           ),
                         ),
                         Text(
-                          '${((_materiasAprobadas.length + _materiasTrimestreActual.length) / _totalMaterias * 100).toStringAsFixed(0)}%',
+                          '${((_materiasAprobadas.length / _totalMaterias) * 100).toStringAsFixed(0)}%',
                           style: GoogleFonts.poppins(
                             fontSize: 20,
                             fontWeight: FontWeight.w600,
@@ -267,7 +409,7 @@ class _FlowgramState extends State<Flowgram> {
                         const SizedBox(height: 12),
                         // Botón para total de créditos con estilo personalizado
                         InkWell(
-                          onTap: () {}, // Si quieres puedes agregar funcionalidad, o quitar onTap
+                          onTap: () {},
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
@@ -278,7 +420,7 @@ class _FlowgramState extends State<Flowgram> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.grade, color: Colors.black, size: 16), // Ícono neutro o distinto
+                                Icon(Icons.grade, color: Colors.black, size: 16),
                                 const SizedBox(width: 8),
                                 Text(
                                   'Créditos Aprobados: $_totalCreditos',
@@ -291,6 +433,19 @@ class _FlowgramState extends State<Flowgram> {
                             ),
                           ),
                         ),
+                        const SizedBox(height: 12),
+                        if (_notasAprobadas.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: Text(
+                              'Promedio de notas aprobadas: ${_calcularPromedioNotas()!.toStringAsFixed(2)}',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.blueGrey[900],
+                              ),
+                            ),
+                          ),
                         const SizedBox(height: 12),
                         Align(
                           alignment: Alignment.centerLeft,
@@ -399,16 +554,7 @@ class _FlowgramState extends State<Flowgram> {
                                           }
                                         });
                                       } else if (_selectionMode == SelectionMode.current) {
-                                        setState(() {
-                                          if (_materiasTrimestreActual.contains(codigo)) {
-                                            _materiasTrimestreActual.remove(codigo);
-
-                                          } else {
-                                            _materiasTrimestreActual.add(codigo);
-
-                                          }
-                                        });
-
+                                        _toggleMateriaActual(codigo);
                                       }
                                     },
                                   style: ElevatedButton.styleFrom(
@@ -426,7 +572,9 @@ class _FlowgramState extends State<Flowgram> {
                                     padding: const EdgeInsets.all(12),
                                   ),
                                   child: Text(
-                                    nombre,
+                                    _notasAprobadas.containsKey(codigo)
+                                        ? '$nombre (${_notasAprobadas[codigo]})'
+                                        : nombre,
                                     softWrap: true,
                                     overflow: TextOverflow.visible,
                                     maxLines: null,

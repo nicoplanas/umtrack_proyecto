@@ -41,6 +41,7 @@ abstract class BaseUser {
 class StudentUser extends BaseUser {
   final String major;
   final Map<String, dynamic> passedCourses;
+  final Map<String, dynamic> currentCourses;
   final DateTime dateOfEnrollment;
   final int credits;
 
@@ -56,6 +57,7 @@ class StudentUser extends BaseUser {
     required super.lastLoginAt,
     required this.major,
     required this.passedCourses,
+    required this.currentCourses,
     required this.dateOfEnrollment,
     required this.credits,
   });
@@ -72,6 +74,7 @@ class StudentUser extends BaseUser {
     lastLoginAt: _fromTimestampOrDate(json['lastLoginAt']),
     major: json['major'],
     passedCourses: Map<String, dynamic>.from(json['passedCourses']),
+    currentCourses: Map<String, dynamic>.from(json['currentCourses']),
     dateOfEnrollment: _fromTimestampOrDate(json['dateOfEnrollment']),
     credits: json['credits'],
   );
