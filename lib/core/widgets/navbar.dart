@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -8,8 +7,6 @@ import '../../features/auth/views/login_page.dart';
 import '../../features/profile/views/profile_page.dart';
 import '../../features/profile/views/profile_settings_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
-
 
 class Navbar extends StatefulWidget {
   final String? email;
@@ -71,7 +68,7 @@ class _NavbarState extends State<Navbar> {
                       MaterialPageRoute(builder: (context) => const LandingPage()),
                     );
                   }),
-                  _navButton('Mi carrera', () async {
+                  _navButton('Carrera', () async {
                     final user = FirebaseAuth.instance.currentUser;
                     if (user != null) {
                       try {
@@ -115,7 +112,7 @@ class _NavbarState extends State<Navbar> {
                     }
                   }),
 
-                  _navItem('Materias'),
+                  _navItem('Clases'),
                   const SizedBox(width: 20),
 
                   if (email != null) ...[

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '/core/widgets/navbar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '/features/career/widgets/flowgram.dart';
+import '../../../core/widgets/footer.dart';
 
 class CareerPage extends StatelessWidget {
   const CareerPage({super.key});
@@ -40,13 +41,24 @@ class CareerPage extends StatelessWidget {
         final email = user.email ?? 'Sin email';
 
         return Scaffold(
-          body: Column(
-            children: [
-              Navbar(email: email),
-              Expanded(
-                child: Flowgram(carreraId: carreraId),
-              ),
-            ],
+          body: SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Navbar(email: email),
+                        Flowgram(carreraId: carreraId),
+                        Footer(), // Ahora se muestra solo al final, no está fijo
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
         );
       },

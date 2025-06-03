@@ -184,129 +184,223 @@ class _SignUpPageState extends State<SignUpPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('Registro'),
-        backgroundColor: Colors.orange,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              TextFormField(
-                controller: _nombreController,
-                decoration: const InputDecoration(labelText: 'Nombre'),
-                validator: (value) =>
-                value == null || value.isEmpty ? 'Ingrese su nombre' : null,
-              ),
-              TextFormField(
-                controller: _apellidoController,
-                decoration: const InputDecoration(labelText: 'Apellido'),
-                validator: (value) =>
-                value == null || value.isEmpty ? 'Ingrese su apellido' : null,
-              ),
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
-                keyboardType: TextInputType.emailAddress,
-                validator: (value) {
-                  if (value == null || value.isEmpty) return 'Ingrese su email';
-                  final regex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
-                  if (!regex.hasMatch(value)) return 'Email inválido';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Fecha de nacimiento:',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
-                  TextButton(
-                    onPressed: _pickBirthday,
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      alignment: Alignment.centerLeft,
+      body: Row(
+        children: [
+          // LADO IZQUIERDO: FORMULARIO
+          Expanded(
+            flex: 1,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+              child: Center(
+                child: SingleChildScrollView(
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Crea tu cuenta',
+                          style: TextStyle(
+                            fontSize: 32,
+                            color: Colors.black,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Ingresa tus credenciales para empezar con tu nueva cuenta',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.black,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        TextFormField(
+                          controller: _nombreController,
+                          decoration: const InputDecoration(labelText: 'Nombre'),
+                          validator: (value) =>
+                          value == null || value.isEmpty ? 'Ingrese su nombre' : null,
+                        ),
+                        TextFormField(
+                          controller: _apellidoController,
+                          decoration: const InputDecoration(labelText: 'Apellido'),
+                          validator: (value) =>
+                          value == null || value.isEmpty ? 'Ingrese su apellido' : null,
+                        ),
+                        TextFormField(
+                          controller: _emailController,
+                          decoration: const InputDecoration(labelText: 'Email'),
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) return 'Ingrese su email';
+                            final regex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+                            if (!regex.hasMatch(value)) return 'Email inválido';
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Fecha de nacimiento:',
+                                style: TextStyle(fontWeight: FontWeight.w600)),
+                            TextButton(
+                              onPressed: _pickBirthday,
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                alignment: Alignment.centerLeft,
+                              ),
+                              child: Text(
+                                _selectedBirthday == null
+                                    ? 'Selecciona una fecha'
+                                    : '${_selectedBirthday!.day}/${_selectedBirthday!.month}/${_selectedBirthday!.year}',
+                                textAlign: TextAlign.left,
+                              ),
+                            ),
+                          ],
+                        ),
+                        TextFormField(
+                          controller: _passwordController,
+                          decoration: const InputDecoration(labelText: 'Contraseña'),
+                          obscureText: true,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) return 'Ingrese contraseña';
+                            if (value.length < 6) return 'Mínimo 6 caracteres';
+                            return null;
+                          },
+                        ),
+                        TextFormField(
+                          controller: _confirmPasswordController,
+                          decoration: const InputDecoration(labelText: 'Confirmar contraseña'),
+                          obscureText: true,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) return 'Confirme contraseña';
+                            if (value != _passwordController.text) return 'No coinciden';
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          value: _tipoUsuario,
+                          items: const [
+                            DropdownMenuItem(value: 'estudiante', child: Text('Estudiante')),
+                            DropdownMenuItem(value: 'profesor', child: Text('Profesor')),
+                          ],
+                          onChanged: (val) {
+                            setState(() {
+                              _tipoUsuario = val;
+                              _selectedCarrera = null;
+                            });
+                          },
+                          decoration: const InputDecoration(labelText: 'Tipo de usuario'),
+                          validator: (value) =>
+                          value == null ? 'Seleccione tipo de usuario' : null,
+                        ),
+                        if (_tipoUsuario == 'estudiante') ...[
+                          const SizedBox(height: 16),
+                          _isLoadingCarreras
+                              ? const Center(child: CircularProgressIndicator())
+                              : DropdownButtonFormField<String>(
+                            value: _selectedCarrera != null &&
+                                _carrerasVisibles.contains(_selectedCarrera)
+                                ? _selectedCarrera
+                                : null,
+                            items: _carrerasVisibles
+                                .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                                .toList(),
+                            onChanged: (val) {
+                              setState(() {
+                                _selectedCarrera = val;
+                              });
+                            },
+                            decoration: const InputDecoration(labelText: 'Carrera'),
+                            validator: (value) =>
+                            value == null ? 'Seleccione carrera' : null,
+                          ),
+                        ],
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _register,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            child: const Text(
+                              'Create Account',
+                              style: TextStyle(fontSize: 16, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text('Already have an account? '),
+                            GestureDetector(
+                              onTap: () => Navigator.pop(context),
+                              child: const Text(
+                                'Sign in here',
+                                style: TextStyle(
+                                  color: Colors.orange,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      ],
                     ),
-                    child: Text(
-                      _selectedBirthday == null
-                          ? 'Selecciona una fecha'
-                          : '${_selectedBirthday!.day}/${_selectedBirthday!.month}/${_selectedBirthday!.year}',
-                      textAlign: TextAlign.left,
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // LADO DERECHO: PANEL NARANJA
+          Expanded(
+            flex: 1,
+            child: Container(
+              color: Colors.orange,
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 400,
+                    height: 300,
+                    color: Colors.white.withOpacity(0.4),
+                    alignment: Alignment.center,
+                    child: const Text(
+                      '400 × 300',
+                      style: TextStyle(color: Colors.white, fontSize: 24),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  const Text(
+                    'Gestiona tu progreso académico',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Mantén un seguimiento detallado de tu\navance con herramientas intuitivas y reportes personalizados',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.white,
                     ),
                   ),
                 ],
               ),
-              TextFormField(
-                controller: _passwordController,
-                decoration: const InputDecoration(labelText: 'Contraseña'),
-                obscureText: true,
-                validator: (value) {
-                  if (value == null || value.isEmpty) return 'Ingrese contraseña';
-                  if (value.length < 6) return 'Mínimo 6 caracteres';
-                  return null;
-                },
-              ),
-              TextFormField(
-                controller: _confirmPasswordController,
-                decoration: const InputDecoration(labelText: 'Confirmar contraseña'),
-                obscureText: true,
-                validator: (value) {
-                  if (value == null || value.isEmpty) return 'Confirme contraseña';
-                  if (value != _passwordController.text) return 'No coinciden';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: _tipoUsuario,
-                items: const [
-                  DropdownMenuItem(value: 'estudiante', child: Text('Estudiante')),
-                  DropdownMenuItem(value: 'profesor', child: Text('Profesor')),
-                ],
-                onChanged: (val) {
-                  setState(() {
-                    _tipoUsuario = val;
-                    _selectedCarrera = null;
-                  });
-                },
-                decoration: const InputDecoration(labelText: 'Tipo de usuario'),
-                validator: (value) =>
-                value == null ? 'Seleccione tipo de usuario' : null,
-              ),
-              if (_tipoUsuario == 'estudiante') ...[
-                const SizedBox(height: 16),
-                _isLoadingCarreras
-                    ? const Center(child: CircularProgressIndicator())
-                    : DropdownButtonFormField<String>(
-                  value: _selectedCarrera != null && _carrerasVisibles.contains(_selectedCarrera)
-                      ? _selectedCarrera
-                      : null,
-                  items: _carrerasVisibles
-                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                      .toList(),
-                  onChanged: (val) {
-                    setState(() {
-                      _selectedCarrera = val;
-                    });
-                  },
-                  decoration: const InputDecoration(labelText: 'Carrera'),
-                  validator: (value) =>
-                  value == null ? 'Seleccione carrera' : null,
-                ),
-              ],
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _register,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                ),
-                child: const Text('Registrarse'),
-              )
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
