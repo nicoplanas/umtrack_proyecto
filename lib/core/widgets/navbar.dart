@@ -119,7 +119,7 @@ class _NavbarState extends State<Navbar> {
                     const SizedBox(width: 10),
                     _userMenu(context),
                   ] else ...[
-                    _primaryButton('Sign In', () {
+                    _primaryButton('Iniciar sesión', () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -201,7 +201,7 @@ class _NavbarState extends State<Navbar> {
             children: const [
               Icon(Icons.account_circle, color: Colors.white70),
               SizedBox(width: 10),
-              Text("Profile", style: TextStyle(color: Colors.white)),
+              Text("Perfil", style: TextStyle(color: Colors.white)),
             ],
           ),
         ),
@@ -211,7 +211,7 @@ class _NavbarState extends State<Navbar> {
             children: const [
               Icon(Icons.settings, color: Colors.white70),
               SizedBox(width: 10),
-              Text("Settings", style: TextStyle(color: Colors.white)),
+              Text("Ajustes", style: TextStyle(color: Colors.white)),
             ],
           ),
         ),
@@ -222,7 +222,7 @@ class _NavbarState extends State<Navbar> {
             children: const [
               Icon(Icons.logout, color: Colors.redAccent),
               SizedBox(width: 10),
-              Text("Logout", style: TextStyle(color: Colors.redAccent)),
+              Text("Cerrar sesión", style: TextStyle(color: Colors.redAccent)),
             ],
           ),
         ),
@@ -255,4 +255,3 @@ class _NavbarState extends State<Navbar> {
     );
   }
 }
-//ola

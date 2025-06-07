@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '/features/landing/views/landing_page.dart';
+import 'package:flutter/cupertino.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -21,6 +23,7 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _birthdayController = TextEditingController();
 
   String? _tipoUsuario;
   String? _selectedCarrera;
@@ -34,6 +37,40 @@ class _SignUpPageState extends State<SignUpPage> {
   void initState() {
     super.initState();
     _loadCarreras();
+  }
+
+  InputDecoration _inputStyle(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: GoogleFonts.poppins(
+        fontSize: 14,
+        color: const Color(0xFF64748B),
+      ),
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Color(0xFFFD8305), width: 2),
+      ),
+    );
+  }
+
+  void _updateBirthdayController() {
+    if (_selectedBirthday != null) {
+      _birthdayController.text =
+      '${_selectedBirthday!.day.toString().padLeft(2, '0')}/'
+          '${_selectedBirthday!.month.toString().padLeft(2, '0')}/'
+          '${_selectedBirthday!.year}';
+    }
   }
 
   Future<void> _loadCarreras() async {
@@ -74,32 +111,28 @@ class _SignUpPageState extends State<SignUpPage> {
     }
   }
 
-  Future<void> _pickBirthday() async {
-    final today = DateTime.now();
-    final initialDate = _selectedBirthday ?? DateTime(today.year - 18, today.month, today.day);
-    final firstDate = DateTime(1900);
-    final lastDate = DateTime(today.year - 10);
-
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: initialDate,
-      firstDate: firstDate,
-      lastDate: lastDate,
-    );
-
-    if (picked != null) {
-      setState(() {
-        _selectedBirthday = picked;
-      });
-    }
-  }
-
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_selectedBirthday == null) {
+    if (_birthdayController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Seleccione fecha de nacimiento')));
+        const SnackBar(content: Text('Ingrese su fecha de nacimiento')),
+      );
+      return;
+    }
+
+    DateTime? parsedBirthday;
+    try {
+      final parts = _birthdayController.text.split('/');
+      parsedBirthday = DateTime(
+        int.parse(parts[2]),
+        int.parse(parts[1]),
+        int.parse(parts[0]),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Fecha inválida')),
+      );
       return;
     }
 
@@ -140,7 +173,7 @@ class _SignUpPageState extends State<SignUpPage> {
         'fullName': '${_nombreController.text.trim()} ${_apellidoController.text.trim()}',
         'username': _emailController.text.split('@')[0],
         'email': _emailController.text.trim(),
-        'birthday': _selectedBirthday!,
+        'birthday': parsedBirthday,
         'profileImageUrl': '',
         'role': _tipoUsuario == 'estudiante' ? 'student' : 'professor',
         'createdAt': now,
@@ -198,38 +231,55 @@ class _SignUpPageState extends State<SignUpPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Crea tu cuenta',
-                          style: TextStyle(
-                            fontSize: 32,
-                            color: Colors.black,
-                            fontWeight: FontWeight.bold,
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: IconButton(
+                            icon: const Icon(
+                                Icons.arrow_back, color: Color(0xFFFD8305)),
+                            onPressed: () {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => const LandingPage()),
+                              );
+                            },
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const Text(
+                        Text(
+                          'Crea tu cuenta',
+                          style: GoogleFonts.poppins(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1E293B),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
                           'Ingresa tus credenciales para empezar con tu nueva cuenta',
-                          style: TextStyle(
+                          style: GoogleFonts.poppins(
                             fontSize: 16,
-                            color: Colors.black,
+                            color: const Color(0xFF64748B),
                           ),
                         ),
                         const SizedBox(height: 24),
                         TextFormField(
                           controller: _nombreController,
-                          decoration: const InputDecoration(labelText: 'Nombre'),
+                          decoration: _inputStyle('Nombre'),
                           validator: (value) =>
                           value == null || value.isEmpty ? 'Ingrese su nombre' : null,
                         ),
+                        const SizedBox(height: 16),
                         TextFormField(
                           controller: _apellidoController,
-                          decoration: const InputDecoration(labelText: 'Apellido'),
+                          decoration: _inputStyle('Apellido'),
                           validator: (value) =>
                           value == null || value.isEmpty ? 'Ingrese su apellido' : null,
                         ),
+                        const SizedBox(height: 16),
                         TextFormField(
                           controller: _emailController,
-                          decoration: const InputDecoration(labelText: 'Email'),
+                          decoration: _inputStyle('Correo institucional'),
                           keyboardType: TextInputType.emailAddress,
                           validator: (value) {
                             if (value == null || value.isEmpty) return 'Ingrese su email';
@@ -239,29 +289,113 @@ class _SignUpPageState extends State<SignUpPage> {
                           },
                         ),
                         const SizedBox(height: 16),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Fecha de nacimiento:',
-                                style: TextStyle(fontWeight: FontWeight.w600)),
-                            TextButton(
-                              onPressed: _pickBirthday,
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.zero,
-                                alignment: Alignment.centerLeft,
-                              ),
-                              child: Text(
-                                _selectedBirthday == null
-                                    ? 'Selecciona una fecha'
-                                    : '${_selectedBirthday!.day}/${_selectedBirthday!.month}/${_selectedBirthday!.year}',
-                                textAlign: TextAlign.left,
-                              ),
-                            ),
-                          ],
+                        const SizedBox(height: 16),
+                        Text(
+                          'Fecha de nacimiento',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF64748B),
+                          ),
                         ),
+                        const SizedBox(height: 8),
+                        Theme(
+                          data: ThemeData.light().copyWith(
+                            canvasColor: Colors.white,
+                            inputDecorationTheme: const InputDecorationTheme(
+                              fillColor: Colors.white,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                flex: 1,
+                                child: DropdownButtonFormField<int>(
+                                  decoration: _inputStyle('Día'),
+                                  value: _selectedBirthday?.day,
+                                  items: List.generate(31, (i) => i + 1)
+                                      .map((d) => DropdownMenuItem(value: d, child: Text('$d')))
+                                      .toList(),
+                                  onChanged: (val) {
+                                    setState(() {
+                                      if (_selectedBirthday != null) {
+                                        _selectedBirthday = DateTime(
+                                          _selectedBirthday!.year,
+                                          _selectedBirthday!.month,
+                                          val!,
+                                        );
+                                      } else {
+                                        _selectedBirthday = DateTime(2000, 1, val!);
+                                      }
+                                      _updateBirthdayController();
+                                    });
+                                  },
+                                  validator: (_) =>
+                                  _selectedBirthday == null ? 'Selecciona una fecha' : null,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                flex: 1,
+                                child: DropdownButtonFormField<int>(
+                                  decoration: _inputStyle('Mes'),
+                                  value: _selectedBirthday?.month,
+                                  items: List.generate(12, (i) => i + 1)
+                                      .map((m) => DropdownMenuItem(value: m, child: Text('$m')))
+                                      .toList(),
+                                  onChanged: (val) {
+                                    setState(() {
+                                      if (_selectedBirthday != null) {
+                                        _selectedBirthday = DateTime(
+                                          _selectedBirthday!.year,
+                                          val!,
+                                          _selectedBirthday!.day,
+                                        );
+                                      } else {
+                                        _selectedBirthday = DateTime(2000, val!, 1);
+                                      }
+                                      _updateBirthdayController();
+                                    });
+                                  },
+                                  validator: (_) =>
+                                  _selectedBirthday == null ? 'Selecciona una fecha' : null,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                flex: 1,
+                                child: DropdownButtonFormField<int>(
+                                  decoration: _inputStyle('Año'),
+                                  value: _selectedBirthday?.year,
+                                  items: List.generate(
+                                      DateTime.now().year - 1900 - 10, (i) => DateTime.now().year - 10 - i)
+                                      .map((y) => DropdownMenuItem(value: y, child: Text('$y')))
+                                      .toList(),
+                                  onChanged: (val) {
+                                    setState(() {
+                                      if (_selectedBirthday != null) {
+                                        _selectedBirthday = DateTime(
+                                          val!,
+                                          _selectedBirthday!.month,
+                                          _selectedBirthday!.day,
+                                        );
+                                      } else {
+                                        _selectedBirthday = DateTime(val!, 1, 1);
+                                      }
+                                      _updateBirthdayController();
+                                    });
+                                  },
+                                  validator: (_) =>
+                                  _selectedBirthday == null ? 'Selecciona una fecha' : null,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
                         TextFormField(
                           controller: _passwordController,
-                          decoration: const InputDecoration(labelText: 'Contraseña'),
+                          decoration: _inputStyle('Contraseña'),
                           obscureText: true,
                           validator: (value) {
                             if (value == null || value.isEmpty) return 'Ingrese contraseña';
@@ -269,9 +403,10 @@ class _SignUpPageState extends State<SignUpPage> {
                             return null;
                           },
                         ),
+                        const SizedBox(height: 16),
                         TextFormField(
                           controller: _confirmPasswordController,
-                          decoration: const InputDecoration(labelText: 'Confirmar contraseña'),
+                          decoration: _inputStyle('Confirmar contraseña'),
                           obscureText: true,
                           validator: (value) {
                             if (value == null || value.isEmpty) return 'Confirme contraseña';
@@ -280,8 +415,17 @@ class _SignUpPageState extends State<SignUpPage> {
                           },
                         ),
                         const SizedBox(height: 16),
-                        DropdownButtonFormField<String>(
+                        Theme(
+                            data: ThemeData.light().copyWith(
+                              canvasColor: Colors.white,
+                              inputDecorationTheme: const InputDecorationTheme(
+                                fillColor: Colors.white,
+                              ),
+                            ),
+                        child: DropdownButtonFormField<String>(
                           value: _tipoUsuario,
+                          decoration: _inputStyle('Tipo de usuario'),
+                          style: GoogleFonts.poppins(color: Colors.black),
                           items: const [
                             DropdownMenuItem(value: 'estudiante', child: Text('Estudiante')),
                             DropdownMenuItem(value: 'profesor', child: Text('Profesor')),
@@ -292,30 +436,40 @@ class _SignUpPageState extends State<SignUpPage> {
                               _selectedCarrera = null;
                             });
                           },
-                          decoration: const InputDecoration(labelText: 'Tipo de usuario'),
                           validator: (value) =>
                           value == null ? 'Seleccione tipo de usuario' : null,
+                          ),
                         ),
+
                         if (_tipoUsuario == 'estudiante') ...[
                           const SizedBox(height: 16),
                           _isLoadingCarreras
                               ? const Center(child: CircularProgressIndicator())
-                              : DropdownButtonFormField<String>(
-                            value: _selectedCarrera != null &&
-                                _carrerasVisibles.contains(_selectedCarrera)
-                                ? _selectedCarrera
-                                : null,
-                            items: _carrerasVisibles
-                                .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                                .toList(),
-                            onChanged: (val) {
-                              setState(() {
-                                _selectedCarrera = val;
-                              });
-                            },
-                            decoration: const InputDecoration(labelText: 'Carrera'),
-                            validator: (value) =>
-                            value == null ? 'Seleccione carrera' : null,
+                              : Theme(
+                              data: ThemeData.light().copyWith(
+                                canvasColor: Colors.white,
+                                inputDecorationTheme: const InputDecorationTheme(
+                                  fillColor: Colors.white,
+                                ),
+                              ),
+                              child: DropdownButtonFormField<String>(
+                              value: _selectedCarrera != null &&
+                                  _carrerasVisibles.contains(_selectedCarrera)
+                                  ? _selectedCarrera
+                                  : null,
+                              decoration: _inputStyle('Carrera'),
+                              style: GoogleFonts.poppins(color: Colors.black),
+                              items: _carrerasVisibles
+                                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                                  .toList(),
+                              onChanged: (val) {
+                                setState(() {
+                                  _selectedCarrera = val;
+                                });
+                              },
+                              validator: (value) =>
+                              value == null ? 'Seleccione carrera' : null,
+                            ),
                           ),
                         ],
                         const SizedBox(height: 24),
@@ -324,12 +478,18 @@ class _SignUpPageState extends State<SignUpPage> {
                           child: ElevatedButton(
                             onPressed: _register,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange,
+                              backgroundColor: const Color(0xFFFD8305),
                               padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
                             ),
-                            child: const Text(
-                              'Create Account',
-                              style: TextStyle(fontSize: 16, color: Colors.white),
+                            child: Text(
+                              'Crear Cuenta',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
@@ -337,14 +497,18 @@ class _SignUpPageState extends State<SignUpPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Text('Already have an account? '),
+                            Text(
+                              '¿Ya tienes una cuenta? ',
+                              style: GoogleFonts.poppins(fontSize: 14, color: Colors.black),
+                            ),
                             GestureDetector(
                               onTap: () => Navigator.pop(context),
-                              child: const Text(
-                                'Sign in here',
-                                style: TextStyle(
-                                  color: Colors.orange,
-                                  fontWeight: FontWeight.bold,
+                              child: Text(
+                                'Inicia sesión aquí',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  color: const Color(0xFFFD8305),
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
@@ -358,41 +522,49 @@ class _SignUpPageState extends State<SignUpPage> {
             ),
           ),
 
+
           // LADO DERECHO: PANEL NARANJA
           Expanded(
             flex: 1,
             child: Container(
-              color: Colors.orange,
+              color: const Color(0xFFFD8305),
               padding: const EdgeInsets.all(32),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
-                    width: 400,
-                    height: 300,
-                    color: Colors.white.withOpacity(0.4),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      '400 × 300',
-                      style: TextStyle(color: Colors.white, fontSize: 24),
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade300.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.asset(
+                        'assets/sign_up.png', // Reemplaza con el nombre real
+                        width: 400,
+                        height: 300,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 40),
-                  const Text(
+                  Text(
                     'Gestiona tu progreso académico',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 24,
+                    style: GoogleFonts.poppins(
+                      fontSize: 40,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Mantén un seguimiento detallado de tu\navance con herramientas intuitivas y reportes personalizados',
+                  Text(
+                    'Mantén un seguimiento detallado de\ntu avance con herramientas intuitivas\ny reportes personalizados',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 16,
+                      fontWeight: FontWeight.w400,
                       color: Colors.white,
                     ),
                   ),

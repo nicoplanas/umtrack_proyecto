@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../auth/views/sign_up_page.dart';
 
 class InfoSection extends StatelessWidget {
   const InfoSection({super.key});
@@ -42,7 +43,12 @@ class InfoSection extends StatelessWidget {
                     Row(
                       children: [
                         ElevatedButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const SignUpPage()),
+                            );
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFFD8305),
                             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
@@ -50,7 +56,7 @@ class InfoSection extends StatelessWidget {
                           ),
                           child: const Text(
                             'Comenzar Ahora',
-                            style: TextStyle(fontFamily: 'Poppins', fontSize: 16),
+                            style: TextStyle(fontFamily: 'Poppins', fontSize: 16, color: Colors.white),
                           ),
                         ),
                         const SizedBox(width: 20),
@@ -62,7 +68,7 @@ class InfoSection extends StatelessWidget {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                           child: const Text(
-                            'Ver Demo',
+                            'Más Información',
                             style: TextStyle(color: Color(0xFFFD8305), fontFamily: 'Poppins', fontSize: 16),
                           ),
                         ),
@@ -198,7 +204,12 @@ class InfoSection extends StatelessWidget {
               ),
               const SizedBox(height: 30),
               TextButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SignUpPage()),
+                  );
+                },
                 style: TextButton.styleFrom(
                   backgroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
@@ -207,7 +218,7 @@ class InfoSection extends StatelessWidget {
                 child: const Text(
                   'Crear Cuenta',
                   style: TextStyle(
-                    color: Color(0xFF4318D1),
+                    color: const Color(0xFFFD8305),
                     fontSize: 16,
                     fontFamily: 'Poppins',
                   ),
