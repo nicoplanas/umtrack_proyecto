@@ -30,8 +30,8 @@ class _SignUpPageState extends State<SignUpPage> {
   List<String> _carrerasVisibles = [];
   Map<String, String> _carrerasMap = {};
   bool _isLoadingCarreras = false;
-
   DateTime? _selectedBirthday;
+  bool _obscurePasswords = true;
 
   @override
   void initState() {
@@ -266,6 +266,7 @@ class _SignUpPageState extends State<SignUpPage> {
                         TextFormField(
                           controller: _nombreController,
                           decoration: _inputStyle('Nombre'),
+                          style: GoogleFonts.poppins(color: Colors.black87),
                           validator: (value) =>
                           value == null || value.isEmpty ? 'Ingrese su nombre' : null,
                         ),
@@ -273,6 +274,7 @@ class _SignUpPageState extends State<SignUpPage> {
                         TextFormField(
                           controller: _apellidoController,
                           decoration: _inputStyle('Apellido'),
+                          style: GoogleFonts.poppins(color: Colors.black87),
                           validator: (value) =>
                           value == null || value.isEmpty ? 'Ingrese su apellido' : null,
                         ),
@@ -280,6 +282,7 @@ class _SignUpPageState extends State<SignUpPage> {
                         TextFormField(
                           controller: _emailController,
                           decoration: _inputStyle('Correo institucional'),
+                          style: GoogleFonts.poppins(color: Colors.black87),
                           keyboardType: TextInputType.emailAddress,
                           validator: (value) {
                             if (value == null || value.isEmpty) return 'Ingrese su email';
@@ -395,8 +398,21 @@ class _SignUpPageState extends State<SignUpPage> {
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _passwordController,
-                          decoration: _inputStyle('Contraseña'),
-                          obscureText: true,
+                          obscureText: _obscurePasswords,
+                          decoration: _inputStyle('Contraseña').copyWith(
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePasswords ? Icons.visibility_off : Icons.visibility,
+                                color: const Color(0xFF64748B),
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscurePasswords = !_obscurePasswords;
+                                });
+                              },
+                            ),
+                          ),
+                          style: GoogleFonts.poppins(color: Colors.black87),
                           validator: (value) {
                             if (value == null || value.isEmpty) return 'Ingrese contraseña';
                             if (value.length < 6) return 'Mínimo 6 caracteres';
@@ -406,8 +422,9 @@ class _SignUpPageState extends State<SignUpPage> {
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _confirmPasswordController,
+                          obscureText: _obscurePasswords,
                           decoration: _inputStyle('Confirmar contraseña'),
-                          obscureText: true,
+                          style: GoogleFonts.poppins(color: Colors.black87),
                           validator: (value) {
                             if (value == null || value.isEmpty) return 'Confirme contraseña';
                             if (value != _passwordController.text) return 'No coinciden';

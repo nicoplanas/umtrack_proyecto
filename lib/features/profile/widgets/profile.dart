@@ -121,8 +121,7 @@ class _ProfileState extends State<Profile> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text("Información Personal",
-              style: GoogleFonts.poppins(
-                  fontSize: 18, fontWeight: FontWeight.w600)),
+              style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black)),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -130,28 +129,52 @@ class _ProfileState extends State<Profile> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Nombre Completo", style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+                    Text("Nombre Completo", style: GoogleFonts.poppins(fontWeight: FontWeight.w500, color: Colors.black)),
                     const SizedBox(height: 4),
                     TextField(
                       controller: TextEditingController(text: name),
                       enabled: false,
-                      decoration: const InputDecoration(border: OutlineInputBorder()),
+                      style: GoogleFonts.poppins(
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      decoration: InputDecoration(
+                        border: const OutlineInputBorder(),
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                      ),
                     ),
                     const SizedBox(height: 16),
-                    Text("Teléfono", style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+                    Text("Teléfono", style: GoogleFonts.poppins(fontWeight: FontWeight.w500, color: Colors.black)),
                     const SizedBox(height: 4),
                     TextField(
                       controller: TextEditingController(text: phone),
                       enabled: false,
-                      decoration: const InputDecoration(border: OutlineInputBorder()),
+                      style: GoogleFonts.poppins(
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      decoration: InputDecoration(
+                        border: const OutlineInputBorder(),
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                      ),
                     ),
                     const SizedBox(height: 16),
-                    Text("Dirección", style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+                    Text("Dirección", style: GoogleFonts.poppins(fontWeight: FontWeight.w500, color: Colors.black)),
                     const SizedBox(height: 4),
                     TextField(
                       controller: TextEditingController(text: address),
                       enabled: false,
-                      decoration: const InputDecoration(border: OutlineInputBorder()),
+                      style: GoogleFonts.poppins(
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      decoration: InputDecoration(
+                        border: const OutlineInputBorder(),
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                      ),
                     ),
                   ],
                 ),
@@ -161,20 +184,36 @@ class _ProfileState extends State<Profile> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Correo Electrónico", style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+                    Text("Correo Electrónico", style: GoogleFonts.poppins(fontWeight: FontWeight.w500, color: Colors.black)),
                     const SizedBox(height: 4),
                     TextField(
                       controller: TextEditingController(text: email),
                       enabled: false,
-                      decoration: const InputDecoration(border: OutlineInputBorder()),
+                      style: GoogleFonts.poppins(
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      decoration: InputDecoration(
+                        border: const OutlineInputBorder(),
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                      ),
                     ),
                     const SizedBox(height: 16),
-                    Text("Fecha de Nacimiento", style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+                    Text("Fecha de Nacimiento", style: GoogleFonts.poppins(fontWeight: FontWeight.w500, color: Colors.black)),
                     const SizedBox(height: 4),
                     TextField(
                       controller: TextEditingController(text: birthDate),
                       enabled: false,
-                      decoration: const InputDecoration(border: OutlineInputBorder()),
+                      style: GoogleFonts.poppins(
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      decoration: InputDecoration(
+                        border: const OutlineInputBorder(),
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                      ),
                     ),
                   ],
                 ),
@@ -191,19 +230,19 @@ class _ProfileState extends State<Profile> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text("Información de Contacto de Emergencia", style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.grey)),
+                Text("Información de Contacto de Emergencia", style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.black)),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Contacto", style: GoogleFonts.poppins(color: Colors.grey)),
-                    Text("María Rodriguez (Madre)", style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+                    Text("Contacto", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: Colors.black)),
+                    Text("María Rodriguez (Madre)", style: GoogleFonts.poppins(color: Colors.black)),
                   ],
                 ),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Teléfono", style: GoogleFonts.poppins(color: Colors.grey)),
-                    Text("+58 414-567-8901", style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+                    Text("Teléfono", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: Colors.black)),
+                    Text("+58 414-567-8901", style: GoogleFonts.poppins(color: Colors.black)),
                   ],
                 )
               ],
@@ -261,9 +300,9 @@ class _ProfileState extends State<Profile> {
                   const SizedBox(height: 16),
                   Text(name,
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
+                      style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black)),
                   Text("Ingeniería en Sistemas",
-                      style: GoogleFonts.poppins(color: Colors.grey.shade600)),
+                      style: GoogleFonts.poppins(color: Colors.grey)),
                   const SizedBox(height: 4),
                   Text("8vo Semestre",
                       style: GoogleFonts.poppins(color: Color(0xFFFD8305), fontWeight: FontWeight.w600)),
@@ -271,15 +310,15 @@ class _ProfileState extends State<Profile> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text("ID Estudiante", style: GoogleFonts.poppins(color: Colors.grey)),
-                      Text("2019-1234", style: GoogleFonts.poppins(fontWeight: FontWeight.bold))
+                      Text("ID Estudiante", style: GoogleFonts.poppins(color: Colors.black)),
+                      Text("2019-1234", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: Colors.black))
                     ],
                   ),
                   const SizedBox(height: 4),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text("Promedio", style: GoogleFonts.poppins(color: Colors.grey)),
+                      Text("Promedio", style: GoogleFonts.poppins(color: Colors.black)),
                       Text("3.85", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: Color(0xFFFD8305)))
                     ],
                   ),
@@ -287,8 +326,8 @@ class _ProfileState extends State<Profile> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text("Créditos", style: GoogleFonts.poppins(color: Colors.grey)),
-                      Text("168/180", style: GoogleFonts.poppins(fontWeight: FontWeight.bold))
+                      Text("Créditos", style: GoogleFonts.poppins(color: Colors.black)),
+                      Text("168/180", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: Colors.black))
                     ],
                   ),
                   const SizedBox(height: 16),

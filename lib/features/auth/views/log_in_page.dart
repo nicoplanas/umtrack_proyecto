@@ -17,11 +17,12 @@ class _LoginScreenState extends State<LoginScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   bool _rememberMe = false;
+  bool _obscurePassword = true;
 
   InputDecoration _inputStyle(String hint) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: GoogleFonts.poppins(color: Colors.grey),
+      hintStyle: GoogleFonts.poppins(color: Colors.grey[500]),
       filled: true,
       fillColor: Colors.white,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
@@ -190,6 +191,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         TextFormField(
                           controller: emailController,
                           decoration: _inputStyle('Correo institucional'),
+                          style: GoogleFonts.poppins(color: Colors.black87),
                           keyboardType: TextInputType.emailAddress,
                           validator: (value) {
                             if (value == null || value.isEmpty)
@@ -203,12 +205,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         TextFormField(
                           controller: passwordController,
-                          obscureText: true,
-                          decoration: _inputStyle('Contraseña'),
+                          obscureText: _obscurePassword,
+                          style: GoogleFonts.poppins(color: Colors.black87),
+                          decoration: _inputStyle('Contraseña').copyWith(
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                                color: Colors.grey,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
+                            ),
+                          ),
                           validator: (value) {
-                            if (value == null || value.isEmpty)
-                              return 'Ingrese su contraseña';
-                            if (value.length < 6) return 'Mínimo 6 caracteres';
+                            if (value == null || value.isEmpty) return 'Ingrese su contraseña';
+                            if (value.length < 8) return 'Mínimo 8 caracteres';
                             return null;
                           },
                         ),
@@ -229,7 +243,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 Text(
                                   'Recordarme',
-                                  style: GoogleFonts.poppins(fontSize: 14),
+                                  style: GoogleFonts.poppins(fontSize: 14, color: Colors.black),
                                 ),
                               ],
                             ),
