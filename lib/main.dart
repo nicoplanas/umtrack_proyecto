@@ -20,8 +20,9 @@ class UMTrackApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'UMTrack',
-      theme: ThemeData.dark().copyWith(
+      theme: ThemeData.light().copyWith(
         scaffoldBackgroundColor: const Color(0xFF111111),
         primaryColor: const Color(0xFF0085FF),
         textTheme: GoogleFonts.interTextTheme(
