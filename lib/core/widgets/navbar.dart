@@ -6,6 +6,7 @@ import '../../features/career/views/career_page.dart';
 import '../../features/auth/views/log_in_page.dart';
 import '../../features/profile/views/profile_page.dart';
 import '../../features/profile/views/profile_settings_page.dart';
+import '../../features/classes/views/classes_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Navbar extends StatefulWidget {
@@ -49,9 +50,17 @@ class _NavbarState extends State<Navbar> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // Logo a la izquierda
-          Image.asset(
-            'assets/logo.png',
-            height: 70,
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const LandingPage()),
+              );
+            },
+            child: Image.asset(
+              'assets/logo.png',
+              height: 70,
+            ),
           ),
 
           // Espacio flexible en el medio
@@ -110,9 +119,25 @@ class _NavbarState extends State<Navbar> {
                 }
               }),
               const SizedBox(width: 8),
-              _navItem('Clases'),
+              _navButton('Clases', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ClassesPage()),
+                );
+              }),
               const SizedBox(width: 16),
               if (email != null) ...[
+                IconButton(
+                  icon: const Icon(Icons.notifications_outlined, color: Color(0xFF1E293B), size: 28),
+                  tooltip: 'Notificaciones',
+                  onPressed: () {
+                    // Aquí puedes mostrar un diálogo, un dropdown o navegar a otra pantalla
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('No hay notificaciones nuevas')),
+                    );
+                  },
+                ),
+                const SizedBox(width: 12),
                 _userMenu(context),
               ] else ...[
                 _primaryButton('Iniciar sesión', () {
@@ -147,9 +172,10 @@ class _NavbarState extends State<Navbar> {
       onPressed: onPressed,
       child: Text(
         text,
-        style: GoogleFonts.inter(
+        style: GoogleFonts.poppins(
           color: Colors.black,
           fontSize: 16,
+          fontWeight: FontWeight.normal,
         ),
       ),
     );
@@ -164,7 +190,7 @@ class _NavbarState extends State<Navbar> {
       ),
       child: Text(
         text,
-        style: GoogleFonts.inter(
+        style: GoogleFonts.poppins(
           color: Colors.white,
           fontWeight: FontWeight.bold,
           fontSize: 16,
@@ -193,7 +219,7 @@ class _NavbarState extends State<Navbar> {
             children: [
               const Icon(Icons.account_circle_outlined, color: Color(0xFF1E293B)),
               const SizedBox(width: 10),
-              Text("Perfil", style: GoogleFonts.poppins(fontSize: 14, color: const Color(0xFF1E293B))),
+              Text("Perfil", style: GoogleFonts.poppins(fontSize: 14, color: Color(0xFF1E293B)))
             ],
           ),
         ),

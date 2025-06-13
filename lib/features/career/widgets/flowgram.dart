@@ -24,7 +24,7 @@ class _FlowgramState extends State<Flowgram> {
   Set<String> _materiasAprobadas = {};
   Map<String, int> _notasAprobadas = {};
 
-  final Set<String> _materiasTrimestreActual = {};
+  Set<String> _materiasTrimestreActual = {};
   int _totalMaterias = 0;
   int _totalCreditos = 0;
   int _creditosDesdeBD = 0;
@@ -57,8 +57,17 @@ class _FlowgramState extends State<Flowgram> {
       });
     });
 
-    final columnasOrdenadas = materiasPorTrimestre.entries.toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
+    final trimestresOriginalesOrdenados = materiasPorTrimestre.keys.toList()..sort();
+    final Map<int, List<Map<String, dynamic>>> materiasReasignadas = {};
+    for (int i = 0; i < trimestresOriginalesOrdenados.length; i++) {
+      final nuevaClave = i + 1;
+      final viejaClave = trimestresOriginalesOrdenados[i];
+      final lista = materiasPorTrimestre[viejaClave]!;
+      for (final materia in lista) {
+        materia['trimestre'] = nuevaClave;
+      }
+      materiasReasignadas[nuevaClave] = lista;
+    }
 
     final trimestresLabels = [
       '1er Trimestre', '2do Trimestre', '3er Trimestre', '4to Trimestre',
@@ -66,50 +75,89 @@ class _FlowgramState extends State<Flowgram> {
       '9no Trimestre', '10mo Trimestre', '11vo Trimestre', '12vo Trimestre'
     ];
 
+    final ultimoTrimestre = materiasReasignadas.keys.isEmpty
+        ? 1
+        : materiasReasignadas.keys.reduce((a, b) => a > b ? a : b);
+
     return GestureDetector(
-      onHorizontalDragStart: (_) {}, // evita gesto de retroceso en iOS/Android
+      onHorizontalDragStart: (_) {},
       child: InteractiveViewer(
         constrained: false,
         scaleEnabled: false,
         panEnabled: true,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: columnasOrdenadas.map((entry) {
-            final trimestreIndex = entry.key;
-            final grupo = entry.value;
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: SizedBox(
-                width: 240,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      trimestreIndex <= trimestresLabels.length
-                          ? trimestresLabels[trimestreIndex - 1]
-                          : 'Trimestre $trimestreIndex',
-                      style: GoogleFonts.poppins(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF1E293B),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ...grupo.asMap().entries.take(7).map((entryMateria) {
-                      final materia = entryMateria.value;
-                      final indexMateria = entryMateria.key;
+          children: [
+            ...materiasReasignadas.entries.map((entry) {
+              final trimestreIndex = entry.key;
+              final grupo = entry.value;
 
-                      return DragTarget<Map<String, dynamic>>(
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: SizedBox(
+                  width: 240,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        trimestreIndex <= trimestresLabels.length
+                            ? trimestresLabels[trimestreIndex - 1]
+                            : 'Trimestre $trimestreIndex',
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF1E293B),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ...grupo.asMap().entries.take(7).map((entryMateria) {
+                        final materia = entryMateria.value;
+                        final indexMateria = entryMateria.key;
+
+                        return DragTarget<Map<String, dynamic>>(
+                          onWillAccept: (_) => true,
+                          onAccept: (dragged) async {
+                            if (grupo.length >= 7 &&
+                                !_materiaYaExisteEnGrupo(grupo, dragged['codigo'])) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('⚠️ Máximo 7 materias por trimestre alcanzado.'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                              return;
+                            }
+
+                            await _actualizarPosicionMateria(
+                              dragged['codigo'],
+                              trimestreIndex,
+                              indexMateria,
+                            );
+                          },
+                          builder: (context, candidateData, rejectedData) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              child: Draggable<Map<String, dynamic>>(
+                                data: materia,
+                                feedback: Opacity(
+                                  opacity: 0.8,
+                                  child: _buildMateriaButton(materia),
+                                ),
+                                childWhenDragging: const SizedBox.shrink(),
+                                child: _buildMateriaButton(materia),
+                              ),
+                            );
+                          },
+                        );
+                      }).toList(),
+                      DragTarget<Map<String, dynamic>>(
                         onWillAccept: (_) => true,
                         onAccept: (dragged) async {
-                          final nuevaPosicion = indexMateria;
-
                           if (grupo.length >= 7 &&
                               !_materiaYaExisteEnGrupo(grupo, dragged['codigo'])) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content:
-                                Text('⚠️ Máximo 7 materias por trimestre alcanzado.'),
+                                content: Text('⚠️ Máximo 7 materias por trimestre alcanzado.'),
                                 duration: Duration(seconds: 2),
                               ),
                             );
@@ -119,56 +167,60 @@ class _FlowgramState extends State<Flowgram> {
                           await _actualizarPosicionMateria(
                             dragged['codigo'],
                             trimestreIndex,
-                            nuevaPosicion,
+                            grupo.length,
                           );
                         },
-                        builder: (context, candidateData, rejectedData) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            child: Draggable<Map<String, dynamic>>(
-                              data: materia,
-                              feedback: Opacity(
-                                opacity: 0.8,
-                                child: _buildMateriaButton(materia),
-                              ),
-                              childWhenDragging: const SizedBox.shrink(),
-                              child: _buildMateriaButton(materia),
-                            ),
-                          );
-                        },
-                      );
-                    }).toList(),
+                        builder: (context, candidateData, rejectedData) =>
+                        const SizedBox(height: 24),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+
+            // NUEVO TRIMESTRE DINÁMICO: espacio adicional al final para crear nuevo trimestre
+            // Al final del Row de columnas
+            Padding(
+              padding: const EdgeInsets.only(top: 52), // Ajusta este valor hasta que esté alineado
+              child: SizedBox(
+                width: 240,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     DragTarget<Map<String, dynamic>>(
                       onWillAccept: (_) => true,
                       onAccept: (dragged) async {
-                        if (grupo.length >= 7 &&
-                            !_materiaYaExisteEnGrupo(grupo, dragged['codigo'])) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content:
-                              Text('⚠️ Máximo 7 materias por trimestre alcanzado.'),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                          return;
-                        }
-
-                        final nuevaPosicion = grupo.length;
-
                         await _actualizarPosicionMateria(
                           dragged['codigo'],
-                          trimestreIndex,
-                          nuevaPosicion,
+                          _materiasLocales.map((m) => m['trimestre'] as int).fold(0, (prev, e) => e > prev ? e : prev) + 1,
+                          0,
                         );
                       },
-                      builder: (context, candidateData, rejectedData) =>
-                      const SizedBox(height: 24),
+                      builder: (context, candidateData, rejectedData) {
+                        return Container(
+                          height: 48,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '+ Agregar trimestre nuevo',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF94A3B8),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
               ),
-            );
-          }).toList(),
+            ),
+          ],
         ),
       ),
     );
@@ -178,6 +230,7 @@ class _FlowgramState extends State<Flowgram> {
   bool _materiaYaExisteEnGrupo(List<Map<String, dynamic>> grupo, String codigo) {
     return grupo.any((m) => m['codigo'] == codigo);
   }
+
 
   Future<void> _obtenerCreditosDesdeBD() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -197,12 +250,15 @@ class _FlowgramState extends State<Flowgram> {
 
   Future<void> _cargarMateriasYActualizarEstado() async {
     _cargandoMaterias = true;
-    final materias = await _cargarMateriasDesdeFlujogramaCompuesto();
+    final materias = await _cargarMateriasDesdeFlujogramaPersonalizado();
+
     setState(() {
       _materiasLocales = materias;
+      _totalMaterias = materias.length; // ✅ Calcula el total real
       _cargandoMaterias = false;
     });
   }
+
 
   Future<void> _actualizarPosicionMateria(String codigo, int nuevoTrimestre, int nuevoOrden) async {
     final user = FirebaseAuth.instance.currentUser;
@@ -210,22 +266,31 @@ class _FlowgramState extends State<Flowgram> {
 
     final usuarioDoc = await FirebaseFirestore.instance.collection('usuarios').doc(user.uid).get();
     final carreraId = usuarioDoc.data()?['major'];
-    final carreraDoc = await FirebaseFirestore.instance.collection('carreras').doc(carreraId).get();
-    final flujogramaId = carreraDoc.data()?['flujograma'];
-    if (flujogramaId == null) return;
+    if (carreraId == null) return;
 
-    final ref = FirebaseFirestore.instance.collection('flujogramas').doc(flujogramaId);
-    final flujogramaDoc = await ref.get();
+    final flujogramaId = carreraId.replaceFirst(RegExp(r'^[A-Z]+'), 'FLU');
+
+    final refFlujograma = FirebaseFirestore.instance
+        .collection('usuarios')
+        .doc(user.uid)
+        .collection('flujogramas')
+        .doc(flujogramaId);
+
+    final flujogramaDoc = await refFlujograma.get();
     final flujograma = flujogramaDoc.data();
     if (flujograma == null) return;
 
-    // Filtrar materias que pertenecen al trimestre destino
+    // Obtener el trimestre original de la materia antes del movimiento
+    final trimestreOriginal = flujograma[codigo]?['trimestre'];
+
+    // Filtrar materias que pertenecerán al nuevo trimestre
     final materiasEnTrimestre = flujograma.entries
         .where((e) => e.value is Map && e.value['trimestre'] == nuevoTrimestre)
         .map((e) => {
       'codigo': e.key,
       'ordenEnColumna': e.value['ordenEnColumna'] ?? 99,
-    }).toList();
+    })
+        .toList();
 
     // Quitar la materia que estamos moviendo (si está en la misma lista)
     materiasEnTrimestre.removeWhere((m) => m['codigo'] == codigo);
@@ -238,23 +303,58 @@ class _FlowgramState extends State<Flowgram> {
     for (int i = 0; i < materiasEnTrimestre.length; i++) {
       final codigoMateria = materiasEnTrimestre[i]['codigo'];
       actualizaciones[codigoMateria] = {
-        'trimestre': nuevoTrimestre,
         'ordenEnColumna': i,
+        'trimestre': nuevoTrimestre,
       };
     }
 
+    // Actualizar la UI inmediatamente
     setState(() {
-      // Actualización optimista
       for (final materia in _materiasLocales) {
-        if (materia['codigo'] == codigo) {
-          materia['trimestre'] = nuevoTrimestre;
-          materia['ordenEnColumna'] = nuevoOrden;
+        if (actualizaciones.containsKey(materia['codigo'])) {
+          materia['ordenEnColumna'] = actualizaciones[materia['codigo']]['ordenEnColumna'];
+          materia['trimestre'] = actualizaciones[materia['codigo']]['trimestre'];
+        }
+      }
+    });
+
+    final batch = FirebaseFirestore.instance.batch();
+
+    // Aplicar actualizaciones normales
+    for (final entry in actualizaciones.entries) {
+      final codigo = entry.key;
+      final data = entry.value;
+      batch.update(refFlujograma, {
+        '$codigo.trimestre': data['trimestre'],
+        '$codigo.ordenEnColumna': data['ordenEnColumna'],
+      });
+    }
+
+    // Verificar si el trimestre original quedó vacío
+    if (trimestreOriginal != null && trimestreOriginal != nuevoTrimestre) {
+      final materiasEnOriginal = flujograma.entries.where((e) =>
+      e.key != codigo &&
+          e.value is Map &&
+          e.value['trimestre'] == trimestreOriginal);
+
+      if (materiasEnOriginal.isEmpty) {
+        // Si no quedan materias, ajustar todos los trimestres posteriores
+        for (final entry in flujograma.entries) {
+          final data = entry.value;
+          if (data is Map &&
+              data.containsKey('trimestre') &&
+              data['trimestre'] > trimestreOriginal) {
+            final codigoMateria = entry.key;
+            batch.update(refFlujograma, {
+              '$codigoMateria.trimestre': data['trimestre'] - 1,
+            });
+          }
         }
       }
     }
-    );
-    // Actualizar todos de una sola vez
-    await ref.set(actualizaciones, SetOptions(merge: true));;
+
+    await batch.commit();
+    _cargarMateriasYActualizarEstado();
   }
 
   Future<int?> _solicitarNotaFinal(BuildContext context, String codigo) async {
@@ -297,48 +397,90 @@ class _FlowgramState extends State<Flowgram> {
     );
   }
 
+  // ACTUALIZADO!!!!!!!!
   Future<void> _obtenerMateriasAprobadas() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
     final userDoc = await FirebaseFirestore.instance.collection('usuarios').doc(user.uid).get();
-    final data = userDoc.data();
-    if (data == null) return;
+    final carreraId = userDoc.data()?['major'];
+    if (carreraId == null) return;
 
-    final passed = data['passedCourses'];
-    if (passed == null || passed is! Map<String, dynamic>) return;
+    final flujogramaId = carreraId.replaceFirst(RegExp(r'^[A-Z]+'), 'FLU');
+    final flujogramaDoc = await FirebaseFirestore.instance
+        .collection('usuarios')
+        .doc(user.uid)
+        .collection('flujogramas')
+        .doc(flujogramaId)
+        .get();
 
-    final Map<String, int> aprobadasConNotas = {};
-    passed.forEach((codigo, info) {
-      if (info is Map && info.containsKey('nota')) {
-        aprobadasConNotas[codigo] = info['nota'];
+    final flujogramaData = flujogramaDoc.data();
+    if (flujogramaData == null) return;
+
+    final Set<String> aprobadas = {};
+    final Map<String, int> notas = {};
+
+    flujogramaData.forEach((codigo, info) {
+      if (info is Map<String, dynamic>) {
+        if (info['estado'] == 'aprobada' && info.containsKey('nota')) {
+          aprobadas.add(codigo);
+          final nota = int.tryParse(info['nota'].toString());
+          if (nota != null) notas[codigo] = nota;
+        }
       }
     });
 
     setState(() {
-      _materiasAprobadas = aprobadasConNotas.keys.toSet();
-      _notasAprobadas = aprobadasConNotas;
+      _materiasAprobadas = aprobadas;
+      _notasAprobadas = notas;
     });
   }
 
+  // ACTUALIZADO!!!
   Future<void> _obtenerMateriasTrimestreActual() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    final usuarioDoc = await FirebaseFirestore.instance
+    final userDoc = await FirebaseFirestore.instance.collection('usuarios').doc(user.uid).get();
+    final carreraId = userDoc.data()?['major'];
+    if (carreraId == null) return;
+
+    final flujogramaId = carreraId.replaceFirst(RegExp(r'^[A-Z]+'), 'FLU');
+    final flujogramaRef = FirebaseFirestore.instance
         .collection('usuarios')
         .doc(user.uid)
-        .get();
+        .collection('flujogramas')
+        .doc(flujogramaId);
 
-    final data = usuarioDoc.data();
-    final current = data?['currentCourses'] as Map<String, dynamic>?;
+    final flujogramaDoc = await flujogramaRef.get();
+    final flujogramaData = flujogramaDoc.data();
+    if (flujogramaData == null) return;
 
-    if (current != null) {
-      setState(() {
-        _materiasTrimestreActual.clear();
-        _materiasTrimestreActual.addAll(current.keys);
-      });
+    final Set<String> cursando = {};
+    final Map<String, dynamic> actualizaciones = {};
+
+    flujogramaData.forEach((codigo, info) {
+      if (info is Map<String, dynamic>) {
+        final estado = info['estado'];
+
+        if (estado == 'cursando') {
+          cursando.add(codigo);
+        }
+        // Solo actualizar si el estado es null
+        else if (estado == null) {
+          actualizaciones[codigo] = {'estado': 'cursando'};
+          cursando.add(codigo);
+        }
+      }
+    });
+
+    if (actualizaciones.isNotEmpty) {
+      await flujogramaRef.set(actualizaciones, SetOptions(merge: true));
     }
+
+    setState(() {
+      _materiasTrimestreActual = cursando;
+    });
   }
 
   double? _calcularPromedioNotas() {
@@ -347,63 +489,108 @@ class _FlowgramState extends State<Flowgram> {
     return total / _notasAprobadas.length;
   }
 
-  Future<void> _toggleMateriaAprobada(String codigo, int creditos) async {
+  // ACTUALIZADO!!!
+  Future<void> _toggleMateriaAprobada(String codigo, int _) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    final ref = FirebaseFirestore.instance.collection('usuarios').doc(user.uid);
+    final userRef = FirebaseFirestore.instance.collection('usuarios').doc(user.uid);
+
+    // Obtener el major del usuario
+    final userDoc = await userRef.get();
+    final carreraId = userDoc.data()?['major'];
+    if (carreraId == null) return;
+
+    final flujogramaId = carreraId.replaceFirst(RegExp(r'^[A-Z]+'), 'FLU');
+    final materiaRef = userRef.collection('flujogramas').doc(flujogramaId);
+
+    final flujogramaDoc = await materiaRef.get();
+    final flujogramaData = flujogramaDoc.data();
+    if (flujogramaData == null) return;
+
+    final datosMateria = flujogramaData[codigo];
+    final creditosMateria = (datosMateria is Map && datosMateria['creditos'] is int)
+        ? datosMateria['creditos'] as int
+        : 3;
+
     final yaAprobada = _materiasAprobadas.contains(codigo);
 
     if (yaAprobada) {
-      // La estás removiendo de materias aprobadas (regresa a cursando o ninguna)
-      await ref.set({
-        'passedCourses': {codigo: FieldValue.delete()},
-        'credits': FieldValue.increment(-creditos),
-      }, SetOptions(merge: true));
+      // Cambiar estado a no_aprobada y nota a null
+      await Future.wait([
+        materiaRef.update({
+          '$codigo.estado': 'no_aprobada',
+          '$codigo.nota': null,
+        }),
+        userRef.update({
+          'credits': FieldValue.increment(-creditosMateria),
+        }),
+      ]);
 
       setState(() {
         _materiasAprobadas.remove(codigo);
         _notasAprobadas.remove(codigo);
-        _totalCreditos -= creditos;
+        _totalCreditos -= creditosMateria;
       });
     } else {
       final nota = await _solicitarNotaFinal(context, codigo);
       if (nota == null) return;
 
-      // La estás agregando como materia aprobada, eliminarla de cursando y sumar créditos
-      await ref.set({
-        'passedCourses': {
-          codigo: {
-            'codigo': codigo,
-            'nota': nota,
-          }
-        },
-        'currentCourses': {codigo: FieldValue.delete()},
-        'credits': FieldValue.increment(creditos),
-      }, SetOptions(merge: true));
+      // Cambiar estado a aprobada y guardar nota
+      await Future.wait([
+        materiaRef.update({
+          '$codigo.estado': 'aprobada',
+          '$codigo.nota': nota,
+        }),
+        userRef.update({
+          'credits': FieldValue.increment(creditosMateria),
+        }),
+      ]);
 
       setState(() {
         _materiasAprobadas.add(codigo);
         _materiasTrimestreActual.remove(codigo);
         _notasAprobadas[codigo] = nota;
-        _totalCreditos += creditos;
+        _totalCreditos += creditosMateria;
       });
     }
+
     await _obtenerMateriasAprobadas();
     await _obtenerCreditosDesdeBD();
   }
 
+  // ACTUALIZADO!!!
   Future<void> _toggleMateriaActual(String codigo) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    final ref = FirebaseFirestore.instance.collection('usuarios').doc(user.uid);
-    final yaEsta = _materiasTrimestreActual.contains(codigo);
-    const creditos = 3; // O cámbialo si usas créditos dinámicos
+    final uid = user.uid;
 
-    if (yaEsta) {
-      await ref.set({
-        'currentCourses': {codigo: FieldValue.delete()}
+    // Obtener major → convertir a ID de flujograma
+    final userDoc = await FirebaseFirestore.instance.collection('usuarios').doc(uid).get();
+    final carreraId = userDoc.data()?['major'];
+    if (carreraId == null) return;
+
+    final flujogramaId = carreraId.replaceFirst(RegExp(r'^[A-Z]+'), 'FLU');
+    final ref = FirebaseFirestore.instance
+        .collection('usuarios')
+        .doc(uid)
+        .collection('flujogramas')
+        .doc(flujogramaId);
+
+    final flujogramaDoc = await ref.get();
+    final data = flujogramaDoc.data();
+    if (data == null || !data.containsKey(codigo)) return;
+
+    final estadoActual = data[codigo]['estado'];
+    final int creditos = (data[codigo]['creditos'] ?? 3) as int;
+
+    final batch = FirebaseFirestore.instance.batch();
+    final userRef = FirebaseFirestore.instance.collection('usuarios').doc(uid);
+
+    if (estadoActual == 'cursando') {
+      batch.set(ref, {
+        codigo: {'estado': 'no_aprobada'}
       }, SetOptions(merge: true));
 
       setState(() {
@@ -412,34 +599,42 @@ class _FlowgramState extends State<Flowgram> {
     } else {
       final estabaAprobada = _materiasAprobadas.contains(codigo);
 
-      final batch = FirebaseFirestore.instance.batch();
-
       if (estabaAprobada) {
-        // Si estaba en aprobadas, la removemos y restamos créditos
+        // Borramos nota y restamos créditos
         batch.set(ref, {
-          'passedCourses': {codigo: FieldValue.delete()},
+          codigo: {
+            'estado': 'cursando',
+            'nota': null
+          }
+        }, SetOptions(merge: true));
+
+        batch.set(userRef, {
           'credits': FieldValue.increment(-creditos)
         }, SetOptions(merge: true));
-      }
 
-      // La añadimos a currentCourses
-      batch.set(ref, {
-        'currentCourses': {codigo: codigo}
-      }, SetOptions(merge: true));
-
-      await batch.commit();
-
-      setState(() {
-        _materiasTrimestreActual.add(codigo);
-        if (estabaAprobada) {
+        setState(() {
           _materiasAprobadas.remove(codigo);
           _notasAprobadas.remove(codigo);
           _totalCreditos -= creditos;
-        }
+        });
+      } else {
+        batch.set(ref, {
+          codigo: {'estado': 'cursando'}
+        }, SetOptions(merge: true));
+      }
+
+      setState(() {
+        _materiasTrimestreActual.add(codigo);
       });
     }
+
+    await batch.commit();
+
+    await _obtenerMateriasTrimestreActual();
+    await _obtenerCreditosDesdeBD();
   }
 
+  // ACTUALIZADO!!!!!!!!
   Widget _buildMateriaButton(Map<String, dynamic> materia) {
     final nombre = materia['nombre'];
     final codigo = materia['codigo'];
@@ -463,127 +658,237 @@ class _FlowgramState extends State<Flowgram> {
       textColor = Colors.blue[900]!;
     }
 
-    return GestureDetector(
-      onTap: () {
-        final creditosInt = int.tryParse(creditos.toString()) ?? 3;
-        if (_selectionMode == SelectionMode.approved) {
-          _toggleMateriaAprobada(codigo, creditosInt);
-        } else if (_selectionMode == SelectionMode.current) {
-          _toggleMateriaActual(codigo);
-        }
-      },
-      child: Container(
-        width: 240,
-        margin: const EdgeInsets.symmetric(vertical: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: borderColor),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              nombre,
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: textColor,
-              ),
-            ),
-            if (prerrequisitos.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Text(
-                  'Prerrequisitos: $prerrequisitos',
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w400,
-                    color: textColor.withOpacity(0.75),
-                  ),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          final creditosInt = int.tryParse(creditos.toString()) ?? 3;
+          if (_selectionMode == SelectionMode.approved) {
+            _toggleMateriaAprobada(codigo, creditosInt);
+          } else if (_selectionMode == SelectionMode.current) {
+            _toggleMateriaActual(codigo);
+          }
+        },
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        hoverColor: Colors.transparent,
+        child: Container(
+          width: 240,
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: borderColor),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                nombre,
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: textColor,
                 ),
               ),
-          ],
+              if (prerrequisitos.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    'Prerrequisitos: $prerrequisitos',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400,
+                      color: textColor.withOpacity(0.75),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Future<List<Map<String, dynamic>>> _cargarMateriasDesdeFlujogramaCompuesto() async {
+  // ACTUALIZADO!!!!!!!!
+  Future<List<Map<String, dynamic>>> _cargarMateriasDesdeFlujogramaPersonalizado() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) throw Exception('Usuario no autenticado');
+    if (user == null) return [];
 
-    try {
-      final usuarioDoc = await FirebaseFirestore.instance
-          .collection('usuarios')
-          .doc(user.uid)
-          .get();
+    final userDoc = await FirebaseFirestore.instance
+        .collection('usuarios')
+        .doc(user.uid)
+        .get();
 
-      final carreraId = usuarioDoc.data()?['major'];
-      if (carreraId == null || carreraId == 'Sin carrera') {
-        throw Exception('⚠️ El usuario no tiene carrera asignada.');
-      }
+    final carreraId = userDoc.data()?['major'];
+    if (carreraId == null) return [];
 
-      final carreraDoc = await FirebaseFirestore.instance
-          .collection('carreras')
-          .doc(carreraId)
-          .get();
+    final flujogramaId = carreraId.replaceFirst(RegExp(r'^[A-Z]+'), 'FLU');
 
-      final flujogramaId = carreraDoc.data()?['flujograma'];
-      if (flujogramaId == null) throw Exception('⚠️ No se encontró flujograma para $carreraId');
+    final flujogramaDoc = await FirebaseFirestore.instance
+        .collection('usuarios')
+        .doc(user.uid)
+        .collection('flujogramas')
+        .doc(flujogramaId)
+        .get();
 
-      final flujogramaDoc = await FirebaseFirestore.instance
-          .collection('flujogramas')
-          .doc(flujogramaId)
-          .get();
+    final flujogramaData = flujogramaDoc.data();
+    if (flujogramaData == null || flujogramaData.isEmpty) return [];
 
-      final flujogramaData = flujogramaDoc.data();
-      if (flujogramaData == null || flujogramaData.isEmpty) {
-        throw Exception('⚠️ Flujograma vacío para $flujogramaId');
-      }
+    final firestore = FirebaseFirestore.instance;
+    final List<String> codigosMaterias = flujogramaData.keys.toList();
 
-      final materiaCodigos = flujogramaData.keys.toList();
-      final firestore = FirebaseFirestore.instance;
+    // 🚀 Ejecutar consultas en paralelo con Future.wait
+    List<Future<QuerySnapshot>> futureBatches = [];
+    const batchSize = 10;
 
-      final refs = materiaCodigos.map((codigo) => firestore.collection('materias').doc(codigo)).toList();
-      final snapshots = await Future.wait(refs.map((ref) => ref.get()));
+    for (var i = 0; i < codigosMaterias.length; i += batchSize) {
+      final batch = codigosMaterias.sublist(
+        i,
+        i + batchSize > codigosMaterias.length ? codigosMaterias.length : i + batchSize,
+      );
 
-      final materias = <Map<String, dynamic>>[];
-
-      for (final snap in snapshots) {
-        if (snap.exists) {
-          final data = snap.data()!;
-          final codigo = snap.id;
-          final rawFlujo = flujogramaData[codigo];
-
-          final trimestre = rawFlujo is Map && rawFlujo.containsKey('trimestre')
-              ? rawFlujo['trimestre'] as int
-              : 99;
-          final ordenEnColumna = rawFlujo is Map && rawFlujo.containsKey('ordenEnColumna')
-              ? rawFlujo['ordenEnColumna'] as int
-              : 99;
-
-          materias.add({
-            'codigo': codigo,
-            'nombre': data['nombre'] ?? codigo,
-            'creditos': data['creditos'] ?? 0,
-            'prerequisitos': data['prerequisitos'] ?? [],
-            'trimestre': trimestre,
-            'ordenEnColumna': ordenEnColumna,
-          });
-        }
-      }
-
-      setState(() {
-        _totalMaterias = materias.length;
-      });
-
-      return materias;
-    } catch (e) {
-      debugPrint('❌ Error al cargar materias: $e');
-      return [];
+      futureBatches.add(
+        firestore
+            .collection('materias')
+            .where(FieldPath.documentId, whereIn: batch)
+            .get(),
+      );
     }
+
+    final querySnapshots = await Future.wait(futureBatches);
+
+    List<DocumentSnapshot> documentosMaterias = [];
+    for (final snapshot in querySnapshots) {
+      documentosMaterias.addAll(snapshot.docs);
+    }
+
+    // 🔁 Crear un mapa rápido para acceder por código
+    final Map<String, Map<String, dynamic>> materiasGlobales = {
+      for (var doc in documentosMaterias) doc.id: doc.data() as Map<String, dynamic>,
+    };
+
+    // 🔧 Combinar datos del flujograma personalizado + colección materias
+    final List<Map<String, dynamic>> materiasCompletas = [];
+
+    for (final entry in flujogramaData.entries) {
+      final codigo = entry.key;
+      final datosFlujo = Map<String, dynamic>.from(entry.value);
+      final datosMateria = materiasGlobales[codigo];
+
+      materiasCompletas.add({
+        'codigo': codigo,
+        'estado': datosFlujo['estado'] ?? 'no_aprobada',
+        'nota': datosFlujo['nota'],
+        'trimestre': datosFlujo['trimestre'] ?? 99,
+        'ordenEnColumna': datosFlujo['ordenEnColumna'] ?? 99,
+        'nombre': datosMateria?['nombre'] ?? codigo,
+        'prerequisitos': datosMateria?['prerequisitos'] ?? [],
+        'creditos': datosMateria?['creditos'] ?? 3,
+      });
+    }
+
+    return materiasCompletas;
+  }
+
+  Widget _buildHistorialAcademico() {
+    // Agrupar materias aprobadas por trimestre
+    final Map<int, List<Map<String, dynamic>>> materiasPorTrimestre = {};
+
+    for (final materia in _materiasLocales) {
+      final int? trimestre = materia['trimestre'];
+      final int? nota = _notasAprobadas[materia['codigo']];
+      if (trimestre != null && nota != null) {
+        materiasPorTrimestre.putIfAbsent(trimestre, () => []).add({
+          'nombre': materia['nombre'],
+          'nota': nota,
+        });
+      }
+    }
+
+    // Ordenar trimestres
+    final trimestresOrdenados = materiasPorTrimestre.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+
+    return Center(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const SizedBox(height: 48),
+          Text(
+            'Historial Académico',
+            style: GoogleFonts.poppins(
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF1E293B),
+            ),
+          ),
+          const SizedBox(height: 24),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              return GridView.count(
+                crossAxisCount: 4,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                children: trimestresOrdenados.map((entry) {
+                  final trimestre = entry.key;
+                  final materias = entry.value;
+
+                  final promedio = materias.isNotEmpty
+                      ? (materias.map((m) => m['nota'] as int).reduce((a, b) => a + b) / materias.length)
+                      : 0.0;
+
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Trimestre $trimestre',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 17,
+                            color: const Color(0xFF1E293B),
+                          ),
+                        ),
+                        Text(
+                          'Prom: ${promedio.toStringAsFixed(1)}',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                            color: const Color(0xFF1E293B),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ...materias.map((m) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text(
+                            '• ${m['nombre']}: ${m['nota']}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              color: const Color(0xFF1E293B),
+                            ),
+                          ),
+                        )),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -858,6 +1163,8 @@ class _FlowgramState extends State<Flowgram> {
                         : _buildMateriasUI(),
                   ),
                 ),
+                const SizedBox(height: 32), // Espaciado visual
+                _buildHistorialAcademico(),
               ],
             ),
           ),

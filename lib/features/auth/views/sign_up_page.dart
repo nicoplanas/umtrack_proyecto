@@ -185,8 +185,6 @@ class _SignUpPageState extends State<SignUpPage> {
         if (carreraCode == null) throw Exception('Código de carrera no encontrado');
 
         userData['major'] = carreraCode;
-        userData['passedCourses'] = {}; // <-- mapa vacío
-        userData['currentCourses'] = {};
         userData['dateOfEnrollment'] = now;
         userData['credits'] = 0;
       } else if (_tipoUsuario == 'profesor') {
@@ -195,6 +193,45 @@ class _SignUpPageState extends State<SignUpPage> {
       }
 
       await _firestore.collection('usuarios').doc(user.uid).set(userData);
+
+      if (_tipoUsuario == 'estudiante') {
+        final carreraCode = _carrerasMap[_selectedCarrera];
+        if (carreraCode != null) {
+          final flujogramaId = carreraCode.replaceFirst(RegExp(r'^[A-Z]+'), 'FLU');
+
+          final flujogramaDoc = await _firestore.collection('flujogramas').doc(flujogramaId).get();
+
+          if (flujogramaDoc.exists) {
+            final originalData = flujogramaDoc.data();
+            if (originalData != null && originalData.isNotEmpty) {
+              // Agregamos estado y nota a cada materia
+              final flujogramaConEstado = <String, dynamic>{};
+              originalData.forEach((codigo, data) {
+                if (data is Map<String, dynamic>) {
+                  flujogramaConEstado[codigo] = {
+                    ...data,
+                    'estado': 'no_aprobada',
+                    'nota': null,
+                  };
+                } else {
+                  flujogramaConEstado[codigo] = {
+                    'nombre': data.toString(),
+                    'estado': 'no_aprobada',
+                    'nota': null,
+                  };
+                }
+              });
+
+              await _firestore
+                  .collection('usuarios')
+                  .doc(user.uid)
+                  .collection('flujogramas')
+                  .doc(flujogramaId)
+                  .set(flujogramaConEstado);
+            }
+          }
+        }
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Usuario registrado exitosamente')));
