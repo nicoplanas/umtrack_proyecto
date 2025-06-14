@@ -28,6 +28,7 @@ class _FlowgramState extends State<Flowgram> {
   int _totalMaterias = 0;
   int _totalCreditos = 0;
   int _creditosDesdeBD = 0;
+  int _vistaSeleccionada = 0;
 
   SelectionMode _selectionMode = SelectionMode.none;
 
@@ -248,6 +249,12 @@ class _FlowgramState extends State<Flowgram> {
     }
   }
 
+  void _cambiarVista(int index) {
+    setState(() {
+      _vistaSeleccionada = index;
+    });
+  }
+
   Future<void> _cargarMateriasYActualizarEstado() async {
     _cargandoMaterias = true;
     final materias = await _cargarMateriasDesdeFlujogramaPersonalizado();
@@ -397,7 +404,6 @@ class _FlowgramState extends State<Flowgram> {
     );
   }
 
-  // ACTUALIZADO!!!!!!!!
   Future<void> _obtenerMateriasAprobadas() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -436,7 +442,6 @@ class _FlowgramState extends State<Flowgram> {
     });
   }
 
-  // ACTUALIZADO!!!
   Future<void> _obtenerMateriasTrimestreActual() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -483,13 +488,33 @@ class _FlowgramState extends State<Flowgram> {
     });
   }
 
+  Widget _buildToggleButton(String text, int index) {
+    final bool selected = _vistaSeleccionada == index;
+    return ElevatedButton(
+      onPressed: () {
+        setState(() {
+          _vistaSeleccionada = index;
+        });
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: selected ? const Color(0xFFFD8305) : const Color(0xFFE2E8F0),
+        foregroundColor: selected ? Colors.white : const Color(0xFF1E293B),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+      ),
+    );
+  }
+
   double? _calcularPromedioNotas() {
     if (_notasAprobadas.isEmpty) return null;
     final total = _notasAprobadas.values.reduce((a, b) => a + b);
     return total / _notasAprobadas.length;
   }
 
-  // ACTUALIZADO!!!
   Future<void> _toggleMateriaAprobada(String codigo, int _) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -559,7 +584,6 @@ class _FlowgramState extends State<Flowgram> {
     await _obtenerCreditosDesdeBD();
   }
 
-  // ACTUALIZADO!!!
   Future<void> _toggleMateriaActual(String codigo) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -634,7 +658,6 @@ class _FlowgramState extends State<Flowgram> {
     await _obtenerCreditosDesdeBD();
   }
 
-  // ACTUALIZADO!!!!!!!!
   Widget _buildMateriaButton(Map<String, dynamic> materia) {
     final nombre = materia['nombre'];
     final codigo = materia['codigo'];
@@ -711,7 +734,6 @@ class _FlowgramState extends State<Flowgram> {
     );
   }
 
-  // ACTUALIZADO!!!!!!!!
   Future<List<Map<String, dynamic>>> _cargarMateriasDesdeFlujogramaPersonalizado() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return [];
@@ -792,9 +814,34 @@ class _FlowgramState extends State<Flowgram> {
     return materiasCompletas;
   }
 
+  Widget _buildVistaButton(String titulo, int index) {
+    final bool activo = _vistaSeleccionada == index;
+    return GestureDetector(
+      onTap: () => _cambiarVista(index),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        decoration: BoxDecoration(
+          color: activo ? const Color(0xFFFD8305) : Colors.white,
+          border: Border.all(color: const Color(0xFFFD8305)),
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Text(
+          titulo,
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w500,
+            fontSize: 14,
+            color: activo ? Colors.white : const Color(0xFFFD8305),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildHistorialAcademico() {
-    // Agrupar materias aprobadas por trimestre
     final Map<int, List<Map<String, dynamic>>> materiasPorTrimestre = {};
+    final Map<int, double> promedios = {};
+    final Map<int, int> cantidadMaterias = {};
+    final Map<int, bool> desplegado = {};
 
     for (final materia in _materiasLocales) {
       final int? trimestre = materia['trimestre'];
@@ -807,41 +854,66 @@ class _FlowgramState extends State<Flowgram> {
       }
     }
 
-    // Ordenar trimestres
-    final trimestresOrdenados = materiasPorTrimestre.entries.toList()
+    materiasPorTrimestre.forEach((trimestre, materias) {
+      final promedio = materias.map((m) => m['nota'] as int).reduce((a, b) => a + b) / materias.length;
+      promedios[trimestre] = promedio;
+      cantidadMaterias[trimestre] = materias.length;
+    });
+
+    final sortedEntries = materiasPorTrimestre.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
 
-    return Center(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const SizedBox(height: 48),
-          Text(
-            'Historial Académico',
-            style: GoogleFonts.poppins(
-              fontSize: 24,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF1E293B),
-            ),
-          ),
-          const SizedBox(height: 24),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              return GridView.count(
-                crossAxisCount: 4,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                children: trimestresOrdenados.map((entry) {
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const SizedBox(height: 32),
+              Text(
+                'Historial Académico',
+                style: GoogleFonts.poppins(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF1E293B),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Visualiza cada trimestre, materias cursadas y calificaciones obtenidas.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: const Color(0xFF64748B),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                alignment: WrapAlignment.center,
+                children: sortedEntries.map((entry) {
                   final trimestre = entry.key;
+                  final promedio = promedios[trimestre]!;
                   final materias = entry.value;
+                  final estaDesplegado = desplegado[trimestre] ?? false;
 
-                  final promedio = materias.isNotEmpty
-                      ? (materias.map((m) => m['nota'] as int).reduce((a, b) => a + b) / materias.length)
-                      : 0.0;
+                  Color colorNota;
+                  if (promedio >= 18) {
+                    colorNota = Colors.green;
+                  } else if (promedio >= 15) {
+                    colorNota = Colors.yellow;
+                  } else if (promedio >= 12) {
+                    colorNota = Colors.orange;
+                  } else if (promedio >= 10) {
+                    colorNota = Colors.red.shade300;
+                  } else {
+                    colorNota = Colors.red;
+                  }
 
-                  return Container(
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 300,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF8FAFC),
@@ -849,45 +921,170 @@ class _FlowgramState extends State<Flowgram> {
                       border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(
-                          'Trimestre $trimestre',
+                          'Trimestre $trimestre – 2024',
                           style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 17,
-                            color: const Color(0xFF1E293B),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: 'Promedio: ',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              TextSpan(
+                                text: '${promedio.toStringAsFixed(1)}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: colorNota,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         Text(
-                          'Prom: ${promedio.toStringAsFixed(1)}',
+                          '${materias.length} ${materias.length == 1 ? 'materia' : 'materias'}',
                           style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                            color: const Color(0xFF1E293B),
+                            fontSize: 13,
+                            color: Colors.grey,
                           ),
                         ),
                         const SizedBox(height: 8),
-                        ...materias.map((m) => Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Text(
-                            '• ${m['nombre']}: ${m['nota']}',
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              color: const Color(0xFF1E293B),
-                            ),
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              desplegado[trimestre] = !estaDesplegado;
+                            });
+                          },
+                          child: AnimatedRotation(
+                            turns: estaDesplegado ? 0.5 : 0.0,
+                            duration: const Duration(milliseconds: 200),
+                            child: const Icon(Icons.expand_more, size: 24),
                           ),
-                        )),
+                        ),
+                        if (estaDesplegado) ...[
+                          const SizedBox(height: 8),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: materias.map((m) => Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                '• ${m['nombre']}: ${m['nota']}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  color: const Color(0xFF1E293B),
+                                ),
+                              ),
+                            )).toList(),
+                          ),
+                        ],
                       ],
                     ),
                   );
                 }).toList(),
-              );
-            },
+              ),
+              const SizedBox(height: 32),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Leyenda de Calificaciones',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF1E293B),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Columna izquierda (2 items)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _leyendaItem('Excelente (18–20)', Colors.green),
+                            const SizedBox(height: 12),
+                            _leyendaItem('Bueno (15–17)', Colors.yellow),
+                          ],
+                        ),
+
+                        // Columna centro (2 items)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _leyendaItem('Regular (12–14)', Colors.orange),
+                            const SizedBox(height: 12),
+                            _leyendaItem('Deficiente (10-11)', Colors.red.shade300), // slate gray
+                          ],
+                        ),
+
+                        // Columna derecha (1 item)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _leyendaItem('Grave (0–9)', Colors.red),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
+    );
+  }
+
+  Widget _leyendaItem(String texto, Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          margin: const EdgeInsets.only(right: 8),
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        Text(
+          texto,
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            color: const Color(0xFF1E293B),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1063,81 +1260,94 @@ class _FlowgramState extends State<Flowgram> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                      child: ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            _selectionMode = _selectionMode == SelectionMode.approved
-                                ? SelectionMode.none
-                                : SelectionMode.approved;
-                          });
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _selectionMode == SelectionMode.approved
-                              ? const Color(0xFFFD8305) // Activo: Naranja
-                              : Colors.white,            // Inactivo: Blanco
-                          side: const BorderSide(
-                            color: Color(0xFFFD8305),
-                            width: 1,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
-                        ),
-                        child: Text(
-                          'Marcar Materias Aprobadas',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: _selectionMode == SelectionMode.approved
-                                ? Colors.white
-                                : const Color(0xFFFD8305),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                      child: ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            _selectionMode = _selectionMode == SelectionMode.current
-                                ? SelectionMode.none
-                                : SelectionMode.current;
-                          });
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _selectionMode == SelectionMode.current
-                              ? const Color(0xFF3B82F6) // Activo: Azul
-                              : Colors.white,            // Inactivo: Blanco
-                          side: const BorderSide(
-                            color: Color(0xFF3B82F6),
-                            width: 1,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
-                        ),
-                        child: Text(
-                          'Seleccionar Materias Actuales',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: _selectionMode == SelectionMode.current
-                                ? Colors.white
-                                : const Color(0xFF3B82F6),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildVistaButton('Flujograma', 0),
+                      const SizedBox(width: 16),
+                      _buildVistaButton('Historial Académico', 1),
+                    ],
+                  ),
                 ),
+                if (_vistaSeleccionada == 0)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                        child: ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              _selectionMode = _selectionMode == SelectionMode.approved
+                                  ? SelectionMode.none
+                                  : SelectionMode.approved;
+                            });
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _selectionMode == SelectionMode.approved
+                                ? const Color(0xFFFD8305)
+                                : Colors.white,
+                            side: const BorderSide(
+                              color: Color(0xFFFD8305),
+                              width: 1,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
+                          ),
+                          child: Text(
+                            'Marcar Materias Aprobadas',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: _selectionMode == SelectionMode.approved
+                                  ? Colors.white
+                                  : const Color(0xFFFD8305),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                        child: ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              _selectionMode = _selectionMode == SelectionMode.current
+                                  ? SelectionMode.none
+                                  : SelectionMode.current;
+                            });
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _selectionMode == SelectionMode.current
+                                ? const Color(0xFF3B82F6)
+                                : Colors.white,
+                            side: const BorderSide(
+                              color: Color(0xFF3B82F6),
+                              width: 1,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
+                          ),
+                          child: Text(
+                            'Seleccionar Materias Actuales',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: _selectionMode == SelectionMode.current
+                                  ? Colors.white
+                                  : const Color(0xFF3B82F6),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 const SizedBox(height: 32),
                 // Contenedor de materias con columnas por trimestre
                 Container(
@@ -1160,11 +1370,12 @@ class _FlowgramState extends State<Flowgram> {
                         ? const Center(child: CircularProgressIndicator())
                         : _materiasLocales.isEmpty
                         ? const Center(child: Text('No se encontraron materias'))
-                        : _buildMateriasUI(),
+                        : _vistaSeleccionada == 0
+                        ? _buildMateriasUI()
+                        : _buildHistorialAcademico(),
                   ),
                 ),
                 const SizedBox(height: 32), // Espaciado visual
-                _buildHistorialAcademico(),
               ],
             ),
           ),
