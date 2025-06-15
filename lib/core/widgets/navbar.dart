@@ -7,6 +7,7 @@ import '../../features/auth/views/log_in_page.dart';
 import '../../features/profile/views/profile_page.dart';
 import '../../features/profile/views/profile_settings_page.dart';
 import '../../features/classes/views/classes_page.dart';
+import '../../features/Information/views/information_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Navbar extends StatefulWidget {
@@ -125,7 +126,14 @@ class _NavbarState extends State<Navbar> {
                   MaterialPageRoute(builder: (context) => const ClassesPage()),
                 );
               }),
-              const SizedBox(width: 16),
+              const SizedBox(width: 8),
+              _navButton('Información', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const InformationPage()),
+                );
+              }),
+              const SizedBox(width: 8),
               if (email != null) ...[
                 IconButton(
                   icon: const Icon(Icons.notifications_outlined, color: Color(0xFF1E293B), size: 28),
