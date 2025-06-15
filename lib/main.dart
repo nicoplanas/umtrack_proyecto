@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'features/landing/views/landing_page.dart';
+import 'package:umtrack/features/Information/views/information_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,8 +21,9 @@ class UMTrackApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'UMTrack',
-      theme: ThemeData.dark().copyWith(
+      theme: ThemeData.light().copyWith(
         scaffoldBackgroundColor: const Color(0xFF111111),
         primaryColor: const Color(0xFF0085FF),
         textTheme: GoogleFonts.interTextTheme(
@@ -30,6 +32,8 @@ class UMTrackApp extends StatelessWidget {
       ),
       initialRoute: '/landing',
       routes: {
+        '/information': (context) => const InformationPage(),
+        '/informacion': (context) => const InformationPage(),
         '/landing': (context) => const LandingPage(), // sin login
       },
     );
