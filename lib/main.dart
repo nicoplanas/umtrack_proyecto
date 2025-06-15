@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'features/landing/views/landing_page.dart';
+import 'package:umtrack/features/Information/views/information_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,6 +32,8 @@ class UMTrackApp extends StatelessWidget {
       ),
       initialRoute: '/landing',
       routes: {
+        '/information': (context) => const InformationPage(),
+        '/informacion': (context) => const InformationPage(),
         '/landing': (context) => const LandingPage(), // sin login
       },
     );
