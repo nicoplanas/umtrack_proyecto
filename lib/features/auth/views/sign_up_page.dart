@@ -222,12 +222,29 @@ class _SignUpPageState extends State<SignUpPage> {
                 }
               });
 
+              // Guardar el flujograma del usuario
               await _firestore
                   .collection('usuarios')
                   .doc(user.uid)
                   .collection('flujogramas')
                   .doc(flujogramaId)
                   .set(flujogramaConEstado);
+
+              // 🔽 NUEVO BLOQUE: copiar requisitos_adicionales
+              final requisitosSnap = await _firestore
+                  .collection('flujogramas')
+                  .doc(flujogramaId)
+                  .collection('requisitos_adicionales')
+                  .get();
+
+              for (final doc in requisitosSnap.docs) {
+                await _firestore
+                    .collection('usuarios')
+                    .doc(user.uid)
+                    .collection('requisitos_adicionales')
+                    .doc(doc.id)
+                    .set(doc.data());
+              }
             }
           }
         }

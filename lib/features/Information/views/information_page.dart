@@ -204,6 +204,10 @@ class InformationPage extends StatelessWidget {
               ),
             ],
           ),
+          FAQItem(
+            question: 'Contactos claves',
+            textAnswer: 'Numeros: ',
+          ),
         ];
 
         return Scaffold(
