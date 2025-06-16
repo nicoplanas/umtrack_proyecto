@@ -3,8 +3,17 @@ import '../models/faq_item.dart';
 
 class FAQCard extends StatefulWidget {
   final FAQItem item;
+  final Color backgroundColor;
+  final Color questionColor;
+  final Color answerColor;
 
-  const FAQCard({super.key, required this.item});
+  const FAQCard({
+    super.key,
+    required this.item,
+    this.backgroundColor = const Color(0xFFF3F3F3),
+    this.questionColor = Colors.black,
+    this.answerColor = Colors.black87,
+  });
 
   @override
   State<FAQCard> createState() => _FAQCardState();
@@ -18,16 +27,24 @@ class _FAQCardState extends State<FAQCard> {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       elevation: 2,
+      color: widget.backgroundColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ExpansionTile(
         title: Text(
           widget.item.question,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            color: widget.questionColor,
+          ),
         ),
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Text(widget.item.answer),
+            child: Text(
+              widget.item.answer,
+              style: TextStyle(color: widget.answerColor),
+            ),
           ),
         ],
         onExpansionChanged: (expanded) {
