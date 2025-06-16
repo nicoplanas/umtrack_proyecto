@@ -24,6 +24,32 @@ class _FAQCardState extends State<FAQCard> {
 
   @override
   Widget build(BuildContext context) {
+    Widget answerWidget;
+
+    switch (widget.item.question) {
+      case '¿Dónde queda ubicado el Eugenio Mendoza?':
+        answerWidget = _buildAnswerWithImage('assets/eugenio_mendoza.png');
+        break;
+      case '¿Dónde queda ubicado el Edificio A1?':
+        answerWidget = _buildAnswerWithImage('assets/edifa1.png');
+        break;
+      case '¿Dónde queda ubicado el Edificio A2?':
+        answerWidget = _buildAnswerWithImage('assets/edifa2.png');
+        break;
+      case '¿Dónde queda ubicado el Laboratorio de quimica?':
+        answerWidget = _buildAnswerWithImage('assets/labquimica.png');
+        break;
+      case '¿Dónde queda ubicado el Laboratorio de computacion?':
+        answerWidget = _buildAnswerWithImage('assets/labcompu.png');
+        break;
+      default:
+        answerWidget = Text(
+          widget.item.answer,
+          style: TextStyle(color: widget.answerColor),
+          textAlign: TextAlign.justify,
+        );
+    }
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       elevation: 2,
@@ -41,10 +67,7 @@ class _FAQCardState extends State<FAQCard> {
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Text(
-              widget.item.answer,
-              style: TextStyle(color: widget.answerColor),
-            ),
+            child: answerWidget,
           ),
         ],
         onExpansionChanged: (expanded) {
@@ -55,6 +78,27 @@ class _FAQCardState extends State<FAQCard> {
           color: Colors.grey,
         ),
       ),
+    );
+  }
+
+  Widget _buildAnswerWithImage(String assetPath) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          widget.item.answer,
+          style: TextStyle(color: widget.answerColor),
+          textAlign: TextAlign.justify,
+        ),
+        const SizedBox(height: 10),
+        Center(
+          child: Image.asset(
+            assetPath,
+            height: 200,
+            fit: BoxFit.cover,
+          ),
+        ),
+      ],
     );
   }
 }
