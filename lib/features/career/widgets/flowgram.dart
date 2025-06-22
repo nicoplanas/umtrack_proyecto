@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 
 class Flowgram extends StatefulWidget {
   final String carreraId;
@@ -364,41 +365,141 @@ class _FlowgramState extends State<Flowgram> {
     _cargarMateriasYActualizarEstado();
   }
 
-  Future<int?> _solicitarNotaFinal(BuildContext context, String codigo) async {
+  Future<int?> _solicitarNotaFinal(BuildContext context, String nombreMateria) async {
     final TextEditingController _notaController = TextEditingController();
+    final _formKey = GlobalKey<FormState>();
 
     return showDialog<int>(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text('Nota final'),
-          content: TextField(
-            controller: _notaController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Ingrese la nota...',
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: ConstrainedBox( // 👈 limita el ancho
+            constraints: const BoxConstraints(maxWidth: 340),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Ingresar Nota',
+                            style: GoogleFonts.poppins(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF0F172A),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 20, color: Color(0xFF64748B)),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Ingresa la nota con la que aprobaste:',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: const Color(0xFF475569),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      nombreMateria,
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _notaController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      style: const TextStyle(color: Colors.black),
+                      decoration: InputDecoration(
+                        labelText: 'Nota (0–20)',
+                        hintText: 'Ej: 17',
+                        hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                        labelStyle: const TextStyle(color: Color(0xFF64748B)),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      ),
+                      validator: (value) {
+                        final nota = int.tryParse(value ?? '');
+                        if (nota == null || nota < 0 || nota > 20) {
+                          return 'Ingrese un número entero entre 0 y 20';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Color(0xFFCBD5E1)),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: Text(
+                              'Cancelar',
+                              style: GoogleFonts.poppins(
+                                color: const Color(0xFF334155),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              if (_formKey.currentState?.validate() ?? false) {
+                                final nota = int.parse(_notaController.text);
+                                Navigator.of(context).pop(nota);
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF10B981),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: Text(
+                              'Guardar Nota',
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(null),
-              child: const Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () {
-                final text = _notaController.text.trim();
-                final nota = int.tryParse(text);
-                if (nota != null && nota >= 0 && nota <= 20) {
-                  Navigator.of(context).pop(nota);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Ingrese una nota válida entre 0 y 20')),
-                  );
-                }
-              },
-              child: const Text('Guardar'),
-            ),
-          ],
         );
       },
     );
@@ -520,8 +621,6 @@ class _FlowgramState extends State<Flowgram> {
     if (user == null) return;
 
     final userRef = FirebaseFirestore.instance.collection('usuarios').doc(user.uid);
-
-    // Obtener el major del usuario
     final userDoc = await userRef.get();
     final carreraId = userDoc.data()?['major'];
     if (carreraId == null) return;
@@ -538,10 +637,40 @@ class _FlowgramState extends State<Flowgram> {
         ? datosMateria['creditos'] as int
         : 3;
 
+    // ✅ OBTENER PRERREQUISITOS DESDE LA COLECCIÓN GLOBAL
+    final globalMateriaDoc = await FirebaseFirestore.instance
+        .collection('materias')
+        .doc(codigo)
+        .get();
+
+    final globalData = globalMateriaDoc.data();
+    final prerequisitos = (globalData?['prerequisitos'] as List<dynamic>?) ?? [];
+
+    // ✅ VALIDAR PRERREQUISITOS
+    if (prerequisitos.isNotEmpty) {
+      List<String> faltantes = [];
+
+      for (final cod in prerequisitos) {
+        if (!_materiasAprobadas.contains(cod)) {
+          faltantes.add(cod.toString());
+        }
+      }
+
+      if (faltantes.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                '❌ No puedes aprobar esta materia. Faltan prerrequisitos: ${faltantes.join(', ')}'),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        return;
+      }
+    }
+
     final yaAprobada = _materiasAprobadas.contains(codigo);
 
     if (yaAprobada) {
-      // Cambiar estado a no_aprobada y nota a null
       await Future.wait([
         materiaRef.update({
           '$codigo.estado': 'no_aprobada',
@@ -558,10 +687,10 @@ class _FlowgramState extends State<Flowgram> {
         _totalCreditos -= creditosMateria;
       });
     } else {
-      final nota = await _solicitarNotaFinal(context, codigo);
+      final materia = _materiasLocales.firstWhere((m) => m['codigo'] == codigo);
+      final nota = await _solicitarNotaFinal(context, materia['nombre']);
       if (nota == null) return;
 
-      // Cambiar estado a aprobada y guardar nota
       await Future.wait([
         materiaRef.update({
           '$codigo.estado': 'aprobada',
@@ -589,8 +718,6 @@ class _FlowgramState extends State<Flowgram> {
     if (user == null) return;
 
     final uid = user.uid;
-
-    // Obtener major → convertir a ID de flujograma
     final userDoc = await FirebaseFirestore.instance.collection('usuarios').doc(uid).get();
     final carreraId = userDoc.data()?['major'];
     if (carreraId == null) return;
@@ -613,6 +740,7 @@ class _FlowgramState extends State<Flowgram> {
     final userRef = FirebaseFirestore.instance.collection('usuarios').doc(uid);
 
     if (estadoActual == 'cursando') {
+      // Si ya estaba cursando, se remueve y vuelve a no_aprobada
       batch.set(ref, {
         codigo: {'estado': 'no_aprobada'}
       }, SetOptions(merge: true));
@@ -621,19 +749,30 @@ class _FlowgramState extends State<Flowgram> {
         _materiasTrimestreActual.remove(codigo);
       });
     } else {
+      // 🔒 NUEVA VALIDACIÓN: máximo 7 materias cursando
+      if (_materiasTrimestreActual.length >= 7) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⚠️ Solo puedes cursar un máximo de 7 materias a la vez.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+
       final estabaAprobada = _materiasAprobadas.contains(codigo);
 
       if (estabaAprobada) {
-        // Borramos nota y restamos créditos
+        // Si estaba aprobada, revertir estado y restar créditos
         batch.set(ref, {
           codigo: {
             'estado': 'cursando',
-            'nota': null
+            'nota': null,
           }
         }, SetOptions(merge: true));
 
         batch.set(userRef, {
-          'credits': FieldValue.increment(-creditos)
+          'credits': FieldValue.increment(-creditos),
         }, SetOptions(merge: true));
 
         setState(() {
@@ -653,7 +792,6 @@ class _FlowgramState extends State<Flowgram> {
     }
 
     await batch.commit();
-
     await _obtenerMateriasTrimestreActual();
     await _obtenerCreditosDesdeBD();
   }
@@ -1109,7 +1247,7 @@ class _FlowgramState extends State<Flowgram> {
                 Text(
                   'Progreso Académico',
                   style: GoogleFonts.poppins(
-                    fontSize: 36,
+                    fontSize: 35,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF1E293B),
                   ),

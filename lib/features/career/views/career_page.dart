@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '/core/widgets/navbar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '/features/career/widgets/flowgram.dart';
+import '/features/career/widgets/additional_requirements.dart';
+import '/features/career/widgets/change_history.dart';
 import '../../../core/widgets/footer.dart';
 
 class CareerPage extends StatelessWidget {
@@ -37,7 +39,7 @@ class CareerPage extends StatelessWidget {
         }
 
         final data = userSnapshot.data!.data()!;
-        final carreraId = data['carrera'] ?? 'Sin carrera';
+        final carreraId = data['major'] ?? 'Sin carrera';
         final email = user.email ?? 'Sin email';
 
         return Scaffold(
@@ -52,6 +54,8 @@ class CareerPage extends StatelessWidget {
                       children: [
                         Navbar(email: email),
                         Flowgram(carreraId: carreraId),
+                        AdditionalRequirements(carreraId: carreraId),
+                        ChangeHistory(carreraId: carreraId),
                         Footer(), // Ahora se muestra solo al final, no está fijo
                       ],
                     ),
