@@ -8,6 +8,7 @@ import '../../features/profile/views/profile_page.dart';
 import '../../features/profile/views/profile_settings_page.dart';
 import '../../features/classes/views/classes_page.dart';
 import '../../features/Information/views/information_page.dart';
+import '../../features/classes/views/classes_professor_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Navbar extends StatefulWidget {
@@ -20,11 +21,13 @@ class Navbar extends StatefulWidget {
 
 class _NavbarState extends State<Navbar> {
   String? profileImageUrl;
+  String? userRole;
 
   @override
   void initState() {
     super.initState();
     _loadProfileImage();
+    _loadUserRole();
   }
 
   Future<void> _loadProfileImage() async {
@@ -40,6 +43,19 @@ class _NavbarState extends State<Navbar> {
     }
   }
 
+  Future<void> _loadUserRole() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc = await FirebaseFirestore.instance.collection('usuarios').doc(user.uid).get();
+      final data = doc.data();
+      if (data != null && data['role'] != null) {
+        setState(() {
+          userRole = data['role'];
+        });
+      }
+    }
+  }
+
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     final email = user?.email;
@@ -50,7 +66,6 @@ class _NavbarState extends State<Navbar> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Logo a la izquierda
           GestureDetector(
             onTap: () {
               Navigator.push(
@@ -63,11 +78,7 @@ class _NavbarState extends State<Navbar> {
               height: 70,
             ),
           ),
-
-          // Espacio flexible en el medio
           const Spacer(),
-
-          // Nav items + botones alineados hacia la derecha pero no pegados al borde
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -78,55 +89,108 @@ class _NavbarState extends State<Navbar> {
                 );
               }),
               const SizedBox(width: 8),
-              _navButton('Carrera', () async {
-                final user = FirebaseAuth.instance.currentUser;
-                if (user != null) {
-                  try {
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (context) => const Center(child: CircularProgressIndicator()),
-                    );
-
-                    final doc = await FirebaseFirestore.instance
-                        .collection('usuarios')
-                        .doc(user.uid)
-                        .get();
-
-                    Navigator.pop(context);
-
-                    if (doc.exists && doc.data()?['role'] == 'student') {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const CareerPage(),
-                        ),
+              if (userRole == 'student') ...[
+                _navButton('Carrera', () async {
+                  final user = FirebaseAuth.instance.currentUser;
+                  if (user != null) {
+                    try {
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (context) => const Center(child: CircularProgressIndicator()),
                       );
-                    } else {
+
+                      final doc = await FirebaseFirestore.instance
+                          .collection('usuarios')
+                          .doc(user.uid)
+                          .get();
+
+                      Navigator.pop(context);
+
+                      if (doc.exists && doc.data()?['role'] == 'student') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const CareerPage(),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('No tienes una carrera asignada')),
+                        );
+                      }
+                    } catch (e) {
+                      Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('No tienes una carrera asignada')),
+                        SnackBar(content: Text('Error: $e')),
                       );
                     }
-                  } catch (e) {
-                    Navigator.pop(context);
+                  } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error: $e')),
+                      const SnackBar(content: Text('Debes iniciar sesión')),
                     );
                   }
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Debes iniciar sesión')),
-                  );
-                }
-              }),
-              const SizedBox(width: 8),
-              _navButton('Clases', () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ClassesPage()),
-                );
-              }),
-              const SizedBox(width: 8),
+                }),
+                const SizedBox(width: 8),
+                _navButton('Clases', () {
+                  final user = FirebaseAuth.instance.currentUser;
+                  if (user != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ClassesPage()),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Debes iniciar sesión')),
+                    );
+                  }
+                }),
+                const SizedBox(width: 8),
+              ],
+              if (userRole == 'professor') ...[
+                _navButton('Clases', () async {
+                  final user = FirebaseAuth.instance.currentUser;
+                  if (user != null) {
+                    try {
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (context) => const Center(child: CircularProgressIndicator()),
+                      );
+
+                      final doc = await FirebaseFirestore.instance
+                          .collection('usuarios')
+                          .doc(user.uid)
+                          .get();
+
+                      Navigator.pop(context);
+
+                      if (doc.exists && doc.data()?['role'] == 'professor') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ClassesProfessorPage(),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('No tienes una clase asignada')),
+                        );
+                      }
+                    } catch (e) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error: $e')),
+                      );
+                    }
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Debes iniciar sesión')),
+                    );
+                  }
+                }),
+                const SizedBox(width: 8),
+              ],
               _navButton('Información', () {
                 Navigator.push(
                   context,
@@ -139,7 +203,6 @@ class _NavbarState extends State<Navbar> {
                   icon: const Icon(Icons.notifications_outlined, color: Color(0xFF1E293B), size: 28),
                   tooltip: 'Notificaciones',
                   onPressed: () {
-                    // Aquí puedes mostrar un diálogo, un dropdown o navegar a otra pantalla
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('No hay notificaciones nuevas')),
                     );

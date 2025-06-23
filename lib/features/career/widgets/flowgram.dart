@@ -485,7 +485,7 @@ class _FlowgramState extends State<Flowgram> {
                               ),
                             ),
                             child: Text(
-                              'Guardar Nota',
+                              'Guardar',
                               style: GoogleFonts.poppins(
                                 fontWeight: FontWeight.w500,
                                 color: Colors.white,

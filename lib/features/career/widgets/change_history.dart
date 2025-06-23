@@ -137,6 +137,7 @@ class _ChangeHistoryState extends State<ChangeHistory> {
                       child: TextField(
                         controller: _searchController,
                         onChanged: (value) => setState(() => _searchQuery = value),
+                        style: GoogleFonts.poppins(color: Colors.black),
                         decoration: InputDecoration(
                           hintText: 'Buscar por materia...',
                           hintStyle: GoogleFonts.poppins(color: Colors.black45),
@@ -151,23 +152,28 @@ class _ChangeHistoryState extends State<ChangeHistory> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    DropdownButton<String>(
-                      value: _tipoFiltro,
-                      onChanged: (value) => setState(() => _tipoFiltro = value!),
-                      style: GoogleFonts.poppins(color: Colors.black87),
-                      items: const [
-                        DropdownMenuItem(value: 'todos', child: Text('Todos')),
-                        DropdownMenuItem(value: 'nueva', child: Text('Nuevas')),
-                        DropdownMenuItem(value: 'removida', child: Text('Removidas')),
-                        DropdownMenuItem(value: 'prelacion', child: Text('Prerrequisitos')),
-                      ],
+                    DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        dropdownColor: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        value: _tipoFiltro,
+                        onChanged: (value) => setState(() => _tipoFiltro = value!),
+                        style: GoogleFonts.poppins(color: Colors.black87),
+                        icon: const Icon(Icons.arrow_drop_down),
+                        items: const [
+                          DropdownMenuItem(value: 'todos', child: Text('Todos')),
+                          DropdownMenuItem(value: 'nueva', child: Text('Nuevas')),
+                          DropdownMenuItem(value: 'removida', child: Text('Removidas')),
+                          DropdownMenuItem(value: 'prelacion', child: Text('Prerrequisitos')),
+                        ],
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 Text(
                   '${_cambiosFiltrados.length} cambios encontrados',
-                  style: GoogleFonts.poppins(fontSize: 14, color: Colors.blue.shade900),
+                  style: GoogleFonts.poppins(fontSize: 14, color: Color(0xFFFD8305)),
                 ),
               ],
             ),
