@@ -92,20 +92,17 @@ class ClassesProfessor extends StatelessWidget {
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: clases.length,
                       itemBuilder: (context, index) {
-                        final clase =
-                        clases[index].data() as Map<String, dynamic>;
+                        final claseDoc = clases[index];
+                        final clase = claseDoc.data() as Map<String, dynamic>;
+                        final claseId = claseDoc.id;
 
                         final nombre = clase['nombreMateria'] ?? 'Sin nombre';
                         final aula = clase['aula'] ?? 'Aula desconocida';
                         final horario = clase['horario'] ?? {};
-                        final dias = (horario['dias'] as List<dynamic>?)
-                            ?.join(', ') ??
-                            '';
+                        final dias = (horario['dias'] as List<dynamic>?)?.join(', ') ?? '';
                         final horaInicio = horario['horaInicio'] ?? '';
-                        final estudiantes =
-                            (clase['estudiantes'] as Map?)?.length ?? 0;
-                        final evaluaciones =
-                            (clase['evaluaciones'] as Map?)?.length ?? 0;
+                        final estudiantes = (clase['estudiantes'] as Map?)?.length ?? 0;
+                        final evaluaciones = (clase['evaluaciones'] as Map?)?.length ?? 0;
                         final pendientes = clase['pendientes'] ?? 0;
                         final progreso = clase['progreso'] ?? 0;
 
@@ -115,7 +112,7 @@ class ClassesProfessor extends StatelessWidget {
                               context,
                               MaterialPageRoute(
                                 builder: (context) => ClassesDetailsProfessorPage(
-                                  claseId: clase['id'],
+                                  claseId: claseId,
                                   claseData: clase,
                                 ),
                               ),
