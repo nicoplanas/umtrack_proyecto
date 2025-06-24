@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../student/views/manage_student_page.dart';
+import '../widgets/evaluations.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class ClassesDetailsProfessor extends StatelessWidget {
@@ -75,7 +77,7 @@ class ClassesDetailsProfessor extends StatelessWidget {
             child: TabBarView(
               children: [
                 StudentsTab(claseId: claseId),
-                Center(child: Text('Evaluaciones')),
+                EvaluacionesTab(claseId: claseId),
                 Center(child: Text('Tareas')),
                 Center(child: Text('Reportes')),
               ],
@@ -132,43 +134,131 @@ class _StudentsTabState extends State<StudentsTab> {
     });
   }
 
-  void _addEstudiante() {
-    final nombreCtrl = TextEditingController();
-    final acumuladoCtrl = TextEditingController();
+  void _showAddStudentModal(BuildContext context) async {
+    final estudiantesGlobales = await FirebaseFirestore.instance
+        .collection('usuarios')
+        .where('role', isEqualTo: 'student')
+        .get();
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("Nuevo estudiante"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nombreCtrl, decoration: const InputDecoration(labelText: "Nombre")),
-            TextField(controller: acumuladoCtrl, decoration: const InputDecoration(labelText: "Acumulado %")),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("Cancelar"),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final id = DateTime.now().millisecondsSinceEpoch.toString();
-              final newData = {
-                'nombre': nombreCtrl.text,
-                'acumulado': int.tryParse(acumuladoCtrl.text),
-                'color': '#60A5FA'
-              };
-              final ref = FirebaseFirestore.instance.collection('clases').doc(widget.claseId);
-              await ref.update({'estudiantes.$id': newData});
-              Navigator.pop(ctx);
-              _loadData();
-            },
-            child: const Text("Guardar"),
-          ),
-        ],
-      ),
+      builder: (context) {
+        String searchQuery = '';
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final filtrados = estudiantesGlobales.docs.where((doc) {
+              final nombre = (doc['fullName'] ?? '').toString().toLowerCase();
+              return nombre.contains(searchQuery);
+            }).toList();
+
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              backgroundColor: Colors.white,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 500, maxHeight: 500),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Agregar estudiante al curso',
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF0F172A),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      TextField(
+                        onChanged: (value) {
+                          setState(() {
+                            searchQuery = value.toLowerCase();
+                          });
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Buscar estudiante...',
+                          hintStyle: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: const Color(0xFF94A3B8),
+                          ),
+                          prefixIcon: const Icon(Icons.search),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: filtrados.length,
+                          itemBuilder: (context, index) {
+                            final estudiante = filtrados[index];
+                            final uid = estudiante.id;
+                            final nombre = estudiante['fullName'] ?? 'Sin nombre';
+                            final yaInscrito = _estudiantes.containsKey(uid);
+
+                            return ListTile(
+                              title: Text(nombre, style: GoogleFonts.poppins()),
+                              trailing: yaInscrito
+                                  ? const Icon(Icons.check, color: Colors.green)
+                                  : IconButton(
+                                icon: const Icon(Icons.person_add_alt_1),
+                                  onPressed: () async {
+                                    try {
+                                      final nuevo = {
+                                        'nombre': estudiante['fullName'] ?? '',
+                                        'correo': estudiante['email'] ?? '', // 🟠 Usa 'correo' en vez de 'email'
+                                        'estado': 'inscrito',
+                                        'asistencias': 0,
+                                        'inasistencias': 0,
+                                        'notaFinal': 0,
+                                        'evaluaciones': {},
+                                        'acumulado': 0,
+                                      };
+
+                                      await FirebaseFirestore.instance
+                                          .collection('clases')
+                                          .doc(widget.claseId)
+                                          .update({
+                                        'estudiantes.$uid': nuevo,
+                                      });
+
+                                      if (context.mounted) {
+                                        Navigator.pop(context);
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('$nombre agregado al curso')),
+                                        );
+                                      }
+
+                                      await _loadData();
+                                    } catch (e) {
+                                      print('❌ Error al agregar estudiante: $e');
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Error al agregar estudiante')),
+                                        );
+                                      }
+                                    }
+                                  }
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -186,157 +276,203 @@ class _StudentsTabState extends State<StudentsTab> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        _estudiantes.isEmpty
-            ? const Center(child: CircularProgressIndicator())
-            : Padding(
-          padding: const EdgeInsets.all(24),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                )
-              ],
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: _estudiantes.isEmpty
+            ? Center(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  'Lista completa de los estudiantes del curso',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF0F172A),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        style: const TextStyle(color: Colors.black),
-                        decoration: InputDecoration(
-                          hintText: 'Buscar estudiante...',
-                          hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
-                          prefixIcon: const Icon(Icons.search),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    IconButton(
-                      icon: const Icon(Icons.person_add_alt_1, color: Color(0xFFFB923C), size: 28),
-                      onPressed: _addEstudiante,
-                      tooltip: 'Agregar estudiante',
-                    )
-                  ],
+                Icon(
+                  Icons.group_add,
+                  size: 48,
+                  color: Color(0xFFFB923C),
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Total: ${_filteredEstudiantes.length} estudiante${_filteredEstudiantes.length == 1 ? '' : 's'}',
+                  'No hay estudiantes inscritos',
                   style: GoogleFonts.poppins(
-                    fontSize: 14,
+                    fontSize: 16,
                     fontWeight: FontWeight.w500,
-                    color: const Color(0xFF64748B),
+                    color: Color(0xFF64748B),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
+                ElevatedButton.icon(
+                  onPressed: () => _showAddStudentModal(context),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Agregar estudiante'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFFFB923C),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    textStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+          )
+            : Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Lista completa de los estudiantes del curso',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
                 Expanded(
-                  child: ListView.builder(
-                    itemCount: _filteredEstudiantes.length,
-                    itemBuilder: (context, index) {
-                      final entry = _filteredEstudiantes[index];
-                      final id = entry.key;
-                      final nombre = entry.value['nombre'] ?? 'Estudiante';
-                      final acumulado = entry.value['acumulado'];
-                      final avatarColor = entry.value['color'] ?? Colors.greenAccent;
+                  child: TextField(
+                    controller: _searchController,
+                    style: const TextStyle(color: Colors.black),
+                    decoration: InputDecoration(
+                      hintText: 'Buscar estudiante...',
+                      hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                      prefixIcon: const Icon(Icons.search),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                IconButton(
+                  icon: const Icon(Icons.add, color: Color(0xFFFB923C)),
+                  onPressed: () => _showAddStudentModal(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Total: ${_filteredEstudiantes.length} estudiante${_filteredEstudiantes.length == 1 ? '' : 's'}',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.builder(
+                itemCount: _filteredEstudiantes.length,
+                itemBuilder: (context, index) {
+                  final entry = _filteredEstudiantes[index];
+                  final id = entry.key;
+                  final estudiante = entry.value;
+                  final nombre = estudiante['nombre'] ?? 'Estudiante';
+                  final acumulado = estudiante['acumulado'];
+                  final avatarColor = estudiante['color'] ?? Colors.greenAccent;
 
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFF1F5F9)),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 18,
-                                  backgroundColor: _parseColor(avatarColor),
-                                ),
-                                const SizedBox(width: 12),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      nombre,
-                                      style: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                        color: const Color(0xFF0F172A),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Ver detalles',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 12,
-                                        color: const Color(0xFF64748B),
-                                      ),
-                                    )
-                                  ],
-                                )
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                Text(
-                                  acumulado != null ? "$acumulado%" : 'Pendiente',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: acumulado != null
-                                        ? (acumulado >= 90
-                                        ? const Color(0xFF10B981)
-                                        : const Color(0xFFFB923C))
-                                        : const Color(0xFF94A3B8),
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444)),
-                                  onPressed: () => _deleteEstudiante(id),
-                                )
-                              ],
-                            ),
-                          ],
+                  return GestureDetector( // ← 🔸 Envoltura añadida aquí
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ManageStudentPage(
+                            claseId: widget.claseId,
+                            studentId: id,
+                          ),
                         ),
                       );
                     },
-                  ),
-                )
-              ],
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFF1F5F9)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundColor: _parseColor(avatarColor),
+                              ),
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    nombre,
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: const Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Ver detalles',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      color: const Color(0xFF64748B),
+                                    ),
+                                  )
+                                ],
+                              )
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              Text(
+                                acumulado != null ? "$acumulado%" : 'Pendiente',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: acumulado != null
+                                      ? (acumulado >= 90
+                                      ? const Color(0xFF10B981)
+                                      : const Color(0xFFFB923C))
+                                      : const Color(0xFF94A3B8),
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444)),
+                                onPressed: () => _deleteEstudiante(id),
+                              )
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
+          ],
         ),
-      ],
+      ),
     );
   }
+
 
   Color _parseColor(dynamic value) {
     if (value is int) return Color(value);
