@@ -50,6 +50,7 @@ class ManageStudentPage extends StatelessWidget {
                 children: [
                   Navbar(email: email),
                   ManageStudent(
+                    claseId: claseId,
                     studentId: studentId,
                     studentData: Map<String, dynamic>.from(studentData),
                   ),
