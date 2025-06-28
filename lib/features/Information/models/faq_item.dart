@@ -5,3 +5,4 @@ class FAQItem {
   FAQItem({required this.question, required this.answer});
 }
 
+
