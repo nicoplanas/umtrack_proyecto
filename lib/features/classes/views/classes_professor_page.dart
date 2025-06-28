@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '/core/widgets/navbar.dart';
-import '../../../features/profile/widgets/profile_settings.dart';
+import '../widgets/classes_professor.dart';
 import '../../../core/widgets/footer.dart';
 
-class ProfileSettingsPage extends StatelessWidget {
-  const ProfileSettingsPage({super.key});
+class ClassesProfessorPage extends StatelessWidget {
+  const ClassesProfessorPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +19,7 @@ class ProfileSettingsPage extends StatelessWidget {
           body: ListView(
             children: [
               Navbar(email: email),
-              ProfileSettings(),
+              ClassesProfessor(),
               Footer(),
             ],
           ),

@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '/core/widgets/navbar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '/features/career/widgets/flowgram.dart';
+import '/features/career/widgets/additional_requirements.dart';
+import '/features/career/widgets/change_history.dart';
 import '../../../core/widgets/footer.dart';
-import '../../../features/profile/widgets/profile.dart';
 
-class ProfilePage extends StatelessWidget {
-  const ProfilePage({super.key});
+class CareerPage extends StatelessWidget {
+  const CareerPage({super.key});
 
-  @override
   @override
   Widget build(BuildContext context) {
     final User? user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      return const Scaffold(
+      return Scaffold(
         body: Center(child: Text('Debes iniciar sesión')),
       );
     }
@@ -38,24 +39,29 @@ class ProfilePage extends StatelessWidget {
         }
 
         final data = userSnapshot.data!.data()!;
+        final carreraId = data['major'] ?? 'Sin carrera';
         final email = user.email ?? 'Sin email';
 
         return Scaffold(
           body: SafeArea(
-            child: Column(
-              children: [
-                Navbar(email: email),
-                Expanded(
-                  child: SingleChildScrollView(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
                     child: Column(
-                      children: const [
-                        Profile(),
-                        Footer(),
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Navbar(email: email),
+                        Flowgram(carreraId: carreraId),
+                        AdditionalRequirements(carreraId: carreraId),
+                        ChangeHistory(carreraId: carreraId),
+                        Footer(), // Ahora se muestra solo al final, no está fijo
                       ],
                     ),
                   ),
-                ),
-              ],
+                );
+              },
             ),
           ),
         );
