@@ -18,60 +18,68 @@ class _InformationPageState extends State<InformationPage> {
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _searchFeriaController = TextEditingController();
 
-  // Datos de FAQs de la Feria
-  final List<FAQItem> _feriaFaqItems = [
-    FAQItem(
-      question: 'Local A',
-      answer: 'Nombre:Empanaditas, Horario: 7am a 5pm, Tipo de comida: empanadas y desayunos, Precios(dolares):empanadas 1,5/cafe 1/cachitos 2/jugos 2,5 ',
-    ),
-    FAQItem(
-      question: 'Local B',
-      answer: 'Nombre:PinchoPan ,Horario:10am a 6pm , Tipo de comida: Shawarmas y hamburguesas , Precios(dolares):Shawarmas 6/Hamburguesas 6/ Combo Shawarmma 11/ Combo Hamburguesas 11,5',
-    ),
-    FAQItem(
-      question: 'Local C',
-      answer: 'Nombre:Chip a Cookie ,Horario: 9:30am a 6pm , Tipo de comida: galletas , Precios(dolares): 3_galletas 4,5/6_galletas 7/12_galletas 12',
-    ),
-    FAQItem(
-      question: 'Local D',
-      answer: 'Nombre:PizzasUnimet ,Horario:11am a 7pm , Tipo de comida: Pizzas , Precios(dolares):Un Slice 3,5/Dos Slice 6,5/Pizza completa 16',
-    ),
-    FAQItem(
-      question: 'Local E',
-      answer: 'Nombre:UnimetTotal ,Horario:8am a 7:30pm , Tipo de comida: desayunos y almuerzos , Precios(dolares):empanadas 1,5/Hamburguesas 5,5/tequeños 4',
-    ),
-    FAQItem(
-      question: 'Local F',
-      answer: 'Nombre:PanUnimet ,Horario:8am a 5pm , Tipo de comida: Pasteleria , Precios(dolares):Cachitos 3,5/Panes 5/MiniLunch 5',
-    ),
-    FAQItem(
-      question: 'Local G',
-      answer: 'Nombre:Bowl ,Horario:10am a 7pm , Tipo de comida: Bowls de sushi/pollo/carne , Precios(dolares):Bowl pollo 7,5/Bowl carne 7,5/Bowl sushi(pescado) 8,5',
-    ),
-    FAQItem(
-      question: 'Local H',
-      answer: 'Nombre:EmpanadasUnimet ,Horario:7am a 4pm , Tipo de comida: empanadas , Precios(dolares):Empanada de queso 1,5/Empanada de carne 2,5/Empanada de pollo 2,5',
-    ),
-    FAQItem(
-      question: 'Local I',
-      answer: 'Nombre:Dey Donuts ,Horario: 10am a 6:30pm , Tipo de comida: donas , Precios(dolares):dona glaseada 2/dona rellena 3,5/ dona con chispas 3',
-    ),
-    FAQItem(
-      question: 'Local J',
-      answer: 'Nombre:PokeSushi ,Horario:10am a 6:30pm , Tipo de comida: Pokes y sushi , Precios(dolares):Poke pequeño 6/Poke mediano 8,5/Poke grande 12',
-    ),
-    FAQItem(
-      question: 'Baños',
-      answer: 'Los baños se situan debajo del local J, tanto para mujeres y hombres, esta abierto mientras la universidad este abierta',
-    ),
-    FAQItem(
-      question: 'Microondas',
-      answer: 'Los microondas se situan debajo de los baños, justo a su derecha, hay varios microondas que se pueden utilizar',
-    ),
-  ];
-  late List<FAQItem> _filteredFeriaFaqItems;
+  // FAQs Feria clasificadas justo como los definiste
+  final Map<String, List<FAQItem>> _categorizedFeriaFaqItems = {
+    'Desayuno': [
+      FAQItem(
+        question: 'Local A',
+        answer: 'Nombre:Empanaditas, Horario: 7am a 5pm, Tipo de comida: empanadas y desayunos, Precios(dolares):empanadas 1,5/cafe 1/cachitos 2/jugos 2,5',
+      ),
+      FAQItem(
+        question: 'Local E',
+        answer: 'Nombre:UnimetTotal ,Horario:8am a 7:30pm , Tipo de comida: desayunos y almuerzos , Precios(dolares):empanadas 1,5/Hamburguesas 5,5/tequeños 4',
+      ),
+      FAQItem(
+        question: 'Local F',
+        answer: 'Nombre:PanUnimet ,Horario:8am a 5pm , Tipo de comida: Pasteleria , Precios(dolares):Cachitos 3,5/Panes 5/MiniLunch 5',
+      ),
+      FAQItem(
+        question: 'Local H',
+        answer: 'Nombre:EmpanadasUnimet ,Horario:7am a 4pm , Tipo de comida: empanadas , Precios(dolares):Empanada de queso 1,5/Empanada de carne 2,5/Empanada de pollo 2,5',
+      ),
+    ],
+    'Almuerzos': [
+      FAQItem(
+        question: 'Local B',
+        answer: 'Nombre:PinchoPan ,Horario:10am a 6pm , Tipo de comida: Shawarmas y hamburguesas , Precios(dolares):Shawarmas 6/Hamburguesas 6/ Combo Shawarmma 11/ Combo Hamburguesas 11,5',
+      ),
+      FAQItem(
+        question: 'Local D',
+        answer: 'Nombre:PizzasUnimet ,Horario:11am a 7pm , Tipo de comida: Pizzas , Precios(dolares):Un Slice 3,5/Dos Slice 6,5/Pizza completa 16',
+      ),
+      FAQItem(
+        question: 'Local G',
+        answer: 'Nombre:Bowl ,Horario:10am a 7pm , Tipo de comida: Bowls de sushi/pollo/carne , Precios(dolares):Bowl pollo 7,5/Bowl carne 7,5/Bowl sushi(pescado) 8,5',
+      ),
+      FAQItem(
+        question: 'Local J',
+        answer: 'Nombre:PokeSushi ,Horario:10am a 6:30pm , Tipo de comida: Pokes y sushi , Precios(dolares):Poke pequeño 6/Poke mediano 8,5/Poke grande 12',
+      ),
+    ],
+    'Dulces': [
+      FAQItem(
+        question: 'Local C',
+        answer: 'Nombre:Chip a Cookie ,Horario: 9:30am a 6pm , Tipo de comida: galletas , Precios(dolares): 3_galletas 4,5/6_galletas 7/12_galletas 12',
+      ),
+      FAQItem(
+        question: 'Local I',
+        answer: 'Nombre:Dey Donuts ,Horario: 10am a 6:30pm , Tipo de comida: donas , Precios(dolares):dona glaseada 2/dona rellena 3,5/ dona con chispas 3',
+      ),
+    ],
+    'Ubicaciones Extra': [
+      FAQItem(
+        question: 'Baños',
+        answer: 'Los baños se situan debajo del local J, tanto para mujeres y hombres, esta abierto mientras la universidad este abierta',
+      ),
+      FAQItem(
+        question: 'Microondas',
+        answer: 'Los microondas se situan debajo de los baños, justo a su derecha, hay varios microondas que se pueden utilizar',
+      ),
+    ],
+  };
+  late Map<String, List<FAQItem>> _filteredFeriaFaqItems;
 
-  // FAQs generales categorizadas
+  // FAQs generales categorizadas (tu lista original completa)
   final Map<String, List<FAQItem>> _allCategorizedFaqItems = {
     'Servicios y Trámites': [
       FAQItem(
@@ -130,29 +138,29 @@ class _InformationPageState extends State<InformationPage> {
   void initState() {
     super.initState();
 
-    // Inicializar filtros
-    _filteredFeriaFaqItems = _feriaFaqItems;
+    // Inicializar filtros Feria y FAQ generales
+    _filteredFeriaFaqItems = _categorizedFeriaFaqItems;
     _filteredCategorizedFaqItems = _allCategorizedFaqItems;
 
-    // Listener de búsqueda Feria
     _searchFeriaController.addListener(() {
       final q = _normalize(_searchFeriaController.text.trim().toLowerCase());
       setState(() {
-        _filteredFeriaFaqItems = _feriaFaqItems
-            .where((item) => _normalize(item.question.toLowerCase()).contains(q))
-            .toList();
+        _filteredFeriaFaqItems = {};
+        _categorizedFeriaFaqItems.forEach((category, items) {
+          final filtered = items.where((item) => _normalize(item.question.toLowerCase()).contains(q)).toList();
+          if (filtered.isNotEmpty) {
+            _filteredFeriaFaqItems[category] = filtered;
+          }
+        });
       });
     });
 
-    // Listener de búsqueda FAQs generales
     _searchController.addListener(() {
       final q = _normalize(_searchController.text.trim().toLowerCase());
       setState(() {
         _filteredCategorizedFaqItems = {};
         _allCategorizedFaqItems.forEach((category, items) {
-          final filtered = items
-              .where((item) => _normalize(item.question.toLowerCase()).contains(q))
-              .toList();
+          final filtered = items.where((item) => _normalize(item.question.toLowerCase()).contains(q)).toList();
           if (filtered.isNotEmpty) {
             _filteredCategorizedFaqItems[category] = filtered;
           }
@@ -193,7 +201,7 @@ class _InformationPageState extends State<InformationPage> {
               style: GoogleFonts.poppins(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
-                color: Colors.deepOrange.shade900,
+                color: Colors.black,
               ),
             ),
             const SizedBox(height: 12),
@@ -206,13 +214,15 @@ class _InformationPageState extends State<InformationPage> {
             ),
             const SizedBox(height: 24),
 
-            // Buscador y FAQs de Feria
-            Text(
-              'Preguntas de la Feria',
-              style: GoogleFonts.poppins(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Colors.deepOrange.shade900,
+            // Sección FAQs Feria clasificada
+            Center(
+              child: Text(
+                'Preguntas de la Feria',
+                style: GoogleFonts.poppins(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
               ),
             ),
             const SizedBox(height: 10),
@@ -225,9 +235,7 @@ class _InformationPageState extends State<InformationPage> {
                   hintText: 'Buscar en Feria...',
                   hintStyle: const TextStyle(color: Colors.black45),
                   prefixIcon: const Icon(Icons.search, color: Colors.black45),
-                  filled: true,
-                  fillColor: Colors.grey.shade200,
-                  enabledBorder: OutlineInputBorder(
+                  border: OutlineInputBorder(
                     borderSide: BorderSide(color: Colors.deepPurple.shade200),
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -240,24 +248,48 @@ class _InformationPageState extends State<InformationPage> {
             ),
             const SizedBox(height: 16),
             Column(
-              children: _filteredFeriaFaqItems
-                  .map((item) => FAQCard(
-                item: item,
-                backgroundColor: const Color(0xFFFFF3E0),
-                questionColor: Colors.black,
-                answerColor: Colors.black,
-              ))
-                  .toList(),
+              children: _filteredFeriaFaqItems.entries.map((entry) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            entry.key,
+                            style: GoogleFonts.poppins(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.deepOrange.shade900,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      ...entry.value.map((item) => FAQCard(
+                        item: item,
+                        backgroundColor: const Color(0xFFFFF3E0),
+                        questionColor: Colors.black,
+                        answerColor: Colors.black,
+                      )),
+                    ],
+                  ),
+                );
+              }).toList(),
             ),
             const SizedBox(height: 24),
 
-            // Preguntas Frecuentes generales
-            Text(
-              'Preguntas Frecuentes',
-              style: GoogleFonts.poppins(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
+            // Sección Preguntas Frecuentes generales
+            Center(
+              child: Text(
+                'Preguntas Frecuentes Sobre La Universidad',
+                style: GoogleFonts.poppins(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
               ),
             ),
             const SizedBox(height: 10),
@@ -270,9 +302,7 @@ class _InformationPageState extends State<InformationPage> {
                   hintText: 'Buscar pregunta...',
                   hintStyle: const TextStyle(color: Colors.black45),
                   prefixIcon: const Icon(Icons.search, color: Colors.black45),
-                  filled: true,
-                  fillColor: Colors.grey.shade200,
-                  enabledBorder: OutlineInputBorder(
+                  border: OutlineInputBorder(
                     borderSide: BorderSide(color: Colors.deepPurple.shade200),
                     borderRadius: BorderRadius.circular(8),
                   ),
