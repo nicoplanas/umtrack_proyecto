@@ -99,8 +99,68 @@ class _InformationPageState extends State<InformationPage> {
         answer: 'Reservar un cubículo en la biblioteca es un proceso sencillo. Puedes hacerlo a través del sistema de reservas en línea, accesible desde el portal oficial de la biblioteca, o si lo prefieres, puedes dirigirte directamente al mostrador de atención al usuario para consultar la disponibilidad y realizar tu reserva de forma presencial.',
       ),
       FAQItem(
-        question: 'Contactos claves',
-        answer: 'Secretaría: secretaria@universidad.edu, Soporte TI: soporte@universidad.edu.',
+        question: 'Contactos Clave de la UNIMET',
+        answer: '''
+**Contactos Generales y Administrativos**
+  * Central Telefónica UNIMET:
+    * (0212) 241.48.33
+    * (0212) 242.33.42
+    * (0212) 241.59.85
+  * Admisiones:
+    * Teléfono: (0412)-240.32.01
+    * Correo: admision@unimet.edu.ve
+  * Vicerrectorado Administrativo:
+    * Correo: mescalona@unimet.edu.ve (María Gabriela Escalona, Vicerrectora)
+    * Asistentes:
+      * Teresa Guedez: tguedez@unimet.edu.ve / (0212)-240.32.51
+      * Gloria Carballeira: gcarballeira@unimet.edu.ve / (0212)-240.34.01
+  * Secretaría General:
+    * Correo: sperera@unimet.edu.ve (Luis Santiago Perera, Secretario General)
+  * Dirección de Finanzas (Caja UNIMET):
+    * Correo: anieves@unimet.edu.ve (Alexandra Nieves, Directora)
+    * Gerencia de Tesorería y Cobranzas: (0212)-240.36.82
+    * Gerencia de Contabilidad: (0212)-240.34.56
+  * Servicios (Infraestructura, etc.):
+    * Correo: igmendozar@unimet.edu.ve (Indira Mendoza, Directora)
+    * Teléfono: (0212)-240.37.13
+    * Asistente: (0212)-240.37.11
+
+**Contactos para Estudiantes**
+  * Decanato de Estudiantes:
+    * Correo: dec-est@unimet.edu.ve
+    * Correo de Vinculación Universitaria: vinculacionuniversitaria@unimet.edu.ve
+  * Dirección de Desarrollo y Bienestar Estudiantil (DDBE):
+    * Correo: ddbe@unimet.edu.ve
+    * Teléfono: (0212)-240.32.71 (Gerencia)
+    * Asesoramiento Grupal: (0212)-240.37.96
+    * Asesoramiento Individual: (0212)-240.39.19 / (0212)-240.32.84 (Recepción)
+  * Control de Estudios (Dirección de Registro y Control de Estudios):
+    * Pregrado: pregrado@unimet.edu.ve / (0212)-240.32.93 / 240.32.58
+    * Postgrado: postgrado@unimet.edu.ve / (0212)-240.36.51 / 240.36.06
+  * Pasantías:
+    * Correo general de Pasantías: pasantias@unimet.edu.ve
+    * Correo Internship UNIMET: internship@unimet.edu.ve
+    * Feria de Empleos y Pasantías: empleamet@unimet.edu.ve
+  * Solicitud de Documentos (Notas Certificadas, Programas):
+    * Teléfonos: (0212)-240.32.60 / 240.32.61 / 0212)-240.32.93 / 240.36.51 / 240.36.06
+    * Correo para programas certificados: programas@unimet.edu.ve
+    * Correo para revisión de expediente: revisiondedocumentos@unimet.edu.ve
+    * Taquilla de Grado (entrega de documentos): (0212)-240.32.98 / 240.32.54
+  * Biblioteca Pedro Grases:
+    * Teléfonos: (0212)- 240 3433 / 3434
+    * Correo para solvencias: solvenciasbpg@unimet.edu.ve
+  * CIUNIMET (Objetos perdidos y encontrados):
+    * Correo: ciunimet@unimet.edu.ve
+    * Teléfonos: (0212)-240.39.76 / 240.32.76
+
+**Decanatos y Facultades (Ejemplos)**
+  * Facultad de Ciencias (Decano):
+    * Correo: pcertad@unimet.edu.ve (Pedro Certad)
+    * Teléfonos: (0212)-240.38.79 / 240.39.97
+  * Facultad de Humanidades (Decano):
+    * Correo: mbriceno@unimet.edu.ve (Milagros Briceño)
+    * Teléfono: (0212)-240.34.94
+            ''',
       ),
     ],
     'Ubicación de Edificios y Laboratorios': [
