@@ -2,66 +2,225 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../features/landing/views/landing_page.dart';
-import '../../features/auth/views/login_page.dart';
+import '../../features/career/views/career_page.dart';
+import '../../features/auth/views/log_in_page.dart';
 import '../../features/profile/views/profile_page.dart';
 import '../../features/profile/views/profile_settings_page.dart';
+import '../../features/classes/views/classes_page.dart';
+import '../../features/Information/views/information_page.dart';
+import '../../features/classes/views/classes_professor_page.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class Navbar extends StatelessWidget {
-  final String email;
-
-  const Navbar({super.key, required this.email});
+class Navbar extends StatefulWidget {
+  final String? email;
+  const Navbar({Key? key, this.email}) : super(key: key);
 
   @override
+  _NavbarState createState() => _NavbarState();
+}
+
+class _NavbarState extends State<Navbar> {
+  String? profileImageUrl;
+  String? userRole;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfileImage();
+    _loadUserRole();
+  }
+
+  Future<void> _loadProfileImage() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc = await FirebaseFirestore.instance.collection('usuarios').doc(user.uid).get();
+      final data = doc.data();
+      if (data != null && data['profileImageUrl'] != null) {
+        setState(() {
+          profileImageUrl = data['profileImageUrl'];
+        });
+      }
+    }
+  }
+
+  Future<void> _loadUserRole() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc = await FirebaseFirestore.instance.collection('usuarios').doc(user.uid).get();
+      final data = doc.data();
+      if (data != null && data['role'] != null) {
+        setState(() {
+          userRole = data['role'];
+        });
+      }
+    }
+  }
+
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     final email = user?.email;
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20),
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 32),
       color: Colors.white,
-      child: Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 1200),
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const LandingPage()),
+              );
+            },
+            child: Image.asset(
+              'assets/logo.png',
+              height: 70,
+            ),
+          ),
+          const Spacer(),
+          Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // Logo
-              Image.asset(
-                'assets/logo.png',
-                height: 120,
-              ),
+              _navButton('Inicio', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LandingPage()),
+                );
+              }),
+              const SizedBox(width: 8),
+              if (userRole == 'student') ...[
+                _navButton('Carrera', () async {
+                  final user = FirebaseAuth.instance.currentUser;
+                  if (user != null) {
+                    try {
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (context) => const Center(child: CircularProgressIndicator()),
+                      );
 
-              // Nav items + buttons
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _navButton('Inicio', () {
+                      final doc = await FirebaseFirestore.instance
+                          .collection('usuarios')
+                          .doc(user.uid)
+                          .get();
+
+                      Navigator.pop(context);
+
+                      if (doc.exists && doc.data()?['role'] == 'student') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const CareerPage(),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('No tienes una carrera asignada')),
+                        );
+                      }
+                    } catch (e) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error: $e')),
+                      );
+                    }
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Debes iniciar sesión')),
+                    );
+                  }
+                }),
+                const SizedBox(width: 8),
+                _navButton('Clases', () {
+                  final user = FirebaseAuth.instance.currentUser;
+                  if (user != null) {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const LandingPage()),
+                      MaterialPageRoute(builder: (context) => const ClassesPage()),
                     );
-                  }),
-                  _navItem('Mi carrera'),
-                  _navItem('Materias'),
-                  const SizedBox(width: 20),
-
-                  if (email != null) ...[
-                    const SizedBox(width: 10),
-                    _userMenu(context),
-                  ] else ...[
-                    _primaryButton('Sign In', () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Debes iniciar sesión')),
+                    );
+                  }
+                }),
+                const SizedBox(width: 8),
+              ],
+              if (userRole == 'professor') ...[
+                _navButton('Clases', () async {
+                  final user = FirebaseAuth.instance.currentUser;
+                  if (user != null) {
+                    try {
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (context) => const Center(child: CircularProgressIndicator()),
                       );
-                    }),
-                  ],
-                ],
-              ),
+
+                      final doc = await FirebaseFirestore.instance
+                          .collection('usuarios')
+                          .doc(user.uid)
+                          .get();
+
+                      Navigator.pop(context);
+
+                      if (doc.exists && doc.data()?['role'] == 'professor') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ClassesProfessorPage(),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('No tienes una clase asignada')),
+                        );
+                      }
+                    } catch (e) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error: $e')),
+                      );
+                    }
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Debes iniciar sesión')),
+                    );
+                  }
+                }),
+                const SizedBox(width: 8),
+              ],
+              _navButton('Información', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const InformationPage()),
+                );
+              }),
+              const SizedBox(width: 8),
+              if (email != null) ...[
+                IconButton(
+                  icon: const Icon(Icons.notifications_outlined, color: Color(0xFF1E293B), size: 28),
+                  tooltip: 'Notificaciones',
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('No hay notificaciones nuevas')),
+                    );
+                  },
+                ),
+                const SizedBox(width: 12),
+                _userMenu(context),
+              ] else ...[
+                _primaryButton('Iniciar sesión', () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  );
+                }),
+              ],
             ],
           ),
-        ),
+        ],
       ),
     );
   }
@@ -72,7 +231,7 @@ class Navbar extends StatelessWidget {
       child: Text(
         title,
         style: GoogleFonts.inter(
-          color: const Color(0xFF999999),
+          color: Colors.black,
           fontSize: 16,
         ),
       ),
@@ -84,9 +243,10 @@ class Navbar extends StatelessWidget {
       onPressed: onPressed,
       child: Text(
         text,
-        style: GoogleFonts.inter(
-          color: const Color(0xFF999999),
+        style: GoogleFonts.poppins(
+          color: Colors.black,
           fontSize: 16,
+          fontWeight: FontWeight.normal,
         ),
       ),
     );
@@ -101,7 +261,7 @@ class Navbar extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: GoogleFonts.inter(
+        style: GoogleFonts.poppins(
           color: Colors.white,
           fontWeight: FontWeight.bold,
           fontSize: 16,
@@ -112,37 +272,35 @@ class Navbar extends StatelessWidget {
 
   Widget _userMenu(BuildContext context) {
     return PopupMenuButton<int>(
-      offset: const Offset(0, 50),
+      offset: const Offset(0, 55),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: const Color(0xFF333333),
-      icon: CircleAvatar(
+      color: Colors.white,
+      elevation: 12,
+      icon: profileImageUrl != null && profileImageUrl!.isNotEmpty
+          ? CircleAvatar(backgroundImage: NetworkImage(profileImageUrl!))
+          : CircleAvatar(
         radius: 18,
-        backgroundColor: Colors.grey[800],
-        backgroundImage: FirebaseAuth.instance.currentUser?.photoURL != null
-            ? NetworkImage(FirebaseAuth.instance.currentUser!.photoURL!)
-            : null,
-        child: FirebaseAuth.instance.currentUser?.photoURL == null
-            ? const Icon(Icons.person, color: Colors.white)
-            : null,
+        backgroundColor: Colors.grey[300],
+        child: const Icon(Icons.person, color: Colors.black54),
       ),
       itemBuilder: (context) => [
         PopupMenuItem(
           value: 0,
           child: Row(
-            children: const [
-              Icon(Icons.account_circle, color: Colors.white70),
-              SizedBox(width: 10),
-              Text("Profile", style: TextStyle(color: Colors.white)),
+            children: [
+              const Icon(Icons.account_circle_outlined, color: Color(0xFF1E293B)),
+              const SizedBox(width: 10),
+              Text("Perfil", style: GoogleFonts.poppins(fontSize: 14, color: Color(0xFF1E293B)))
             ],
           ),
         ),
         PopupMenuItem(
           value: 1,
           child: Row(
-            children: const [
-              Icon(Icons.settings, color: Colors.white70),
-              SizedBox(width: 10),
-              Text("Settings", style: TextStyle(color: Colors.white)),
+            children: [
+              const Icon(Icons.settings_outlined, color: Color(0xFF1E293B)),
+              const SizedBox(width: 10),
+              Text("Ajustes", style: GoogleFonts.poppins(fontSize: 14, color: const Color(0xFF1E293B))),
             ],
           ),
         ),
@@ -150,10 +308,10 @@ class Navbar extends StatelessWidget {
         PopupMenuItem(
           value: 2,
           child: Row(
-            children: const [
-              Icon(Icons.logout, color: Colors.redAccent),
-              SizedBox(width: 10),
-              Text("Logout", style: TextStyle(color: Colors.redAccent)),
+            children: [
+              const Icon(Icons.logout, color: Color(0xFFDC2626)),
+              const SizedBox(width: 10),
+              Text("Cerrar sesión", style: GoogleFonts.poppins(fontSize: 14, color: Color(0xFFDC2626))),
             ],
           ),
         ),
@@ -161,22 +319,16 @@ class Navbar extends StatelessWidget {
       onSelected: (value) {
         switch (value) {
           case 0:
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const ProfilePage()),
-            );
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
             break;
           case 1:
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const ProfileSettingsPage()),
-            );
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileSettingsPage()));
             break;
           case 2:
             FirebaseAuth.instance.signOut().then((_) {
               Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
                     (route) => false,
               );
             });

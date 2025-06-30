@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '/core/widgets/navbar.dart';
 import '../widgets/info_section.dart';
+import '../../../core/widgets/footer.dart';
 
 class LandingPage extends StatelessWidget {
   const LandingPage({super.key});
@@ -19,6 +20,7 @@ class LandingPage extends StatelessWidget {
             children: [
               Navbar(email: email),
               InfoSection(),
+              Footer(),
             ],
           ),
         );

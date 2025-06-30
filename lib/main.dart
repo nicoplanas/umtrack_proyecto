@@ -3,9 +3,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'features/landing/views/landing_page.dart';
+import 'package:umtrack/features/Information/views/information_page.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('es_ES', null);
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -20,9 +23,10 @@ class UMTrackApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'UMTrack',
-      theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF111111),
+      theme: ThemeData.light().copyWith(
+        scaffoldBackgroundColor: Colors.white,
         primaryColor: const Color(0xFF0085FF),
         textTheme: GoogleFonts.interTextTheme(
           ThemeData.dark().textTheme,
@@ -30,6 +34,8 @@ class UMTrackApp extends StatelessWidget {
       ),
       initialRoute: '/landing',
       routes: {
+        '/information': (context) => const InformationPage(),
+        '/informacion': (context) => const InformationPage(),
         '/landing': (context) => const LandingPage(), // sin login
       },
     );

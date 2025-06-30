@@ -40,7 +40,6 @@ abstract class BaseUser {
 /// Usuario tipo estudiante
 class StudentUser extends BaseUser {
   final String major;
-  final List<dynamic> passedCourses;
   final DateTime dateOfEnrollment;
   final int credits;
 
@@ -55,7 +54,6 @@ class StudentUser extends BaseUser {
     required super.createdAt,
     required super.lastLoginAt,
     required this.major,
-    required this.passedCourses,
     required this.dateOfEnrollment,
     required this.credits,
   });
@@ -71,7 +69,6 @@ class StudentUser extends BaseUser {
     createdAt: _fromTimestampOrDate(json['createdAt']),
     lastLoginAt: _fromTimestampOrDate(json['lastLoginAt']),
     major: json['major'],
-    passedCourses: List<dynamic>.from(json['passedCourses']),
     dateOfEnrollment: _fromTimestampOrDate(json['dateOfEnrollment']),
     credits: json['credits'],
   );
