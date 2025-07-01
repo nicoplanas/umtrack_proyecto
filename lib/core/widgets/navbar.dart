@@ -198,6 +198,17 @@ class _NavbarState extends State<Navbar> {
                 );
               }),
               const SizedBox(width: 8),
+              IconButton(
+                icon: const Icon(Icons.forum, color: Color(0xFF1E293B), size: 26),
+                tooltip: 'Chat',
+                onPressed: () {
+                  // TODO: Navegar a la pantalla de chat o mostrar un mensaje
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Función de chat en desarrollo')),
+                  );
+                },
+              ),
+              const SizedBox(width: 8),
               if (email != null) ...[
                 IconButton(
                   icon: const Icon(Icons.notifications_outlined, color: Color(0xFF1E293B), size: 28),

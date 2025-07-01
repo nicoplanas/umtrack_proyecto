@@ -149,7 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           width: double.infinity,
                           child: OutlinedButton.icon(
                             icon: Image.network(
-                              'https://res.cloudinary.com/doyt5r47e/image/upload/v1746128729/google_dogxyt.webp',
+                              'https://res.cloudinary.com/doyt5r47e/image/upload/v1750829495/google_sit4ge.png',
                               height: 20,
                             ),
                             label: Text(
