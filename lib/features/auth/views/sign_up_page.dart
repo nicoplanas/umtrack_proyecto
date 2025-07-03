@@ -231,7 +231,6 @@ class _SignUpPageState extends State<SignUpPage> {
                   .doc(flujogramaId)
                   .set(flujogramaConEstado);
 
-              // 🔽 NUEVO BLOQUE: copiar requisitos_adicionales
               final requisitosSnap = await _firestore
                   .collection('flujogramas')
                   .doc(flujogramaId)

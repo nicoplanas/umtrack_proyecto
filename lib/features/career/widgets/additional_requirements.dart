@@ -4,96 +4,54 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AdditionalRequirements extends StatefulWidget {
-  final String carreraId;
-
-  const AdditionalRequirements({super.key, required this.carreraId});
+  const AdditionalRequirements({super.key});
 
   @override
   State<AdditionalRequirements> createState() => _AdditionalRequirementsState();
 }
 
 class _AdditionalRequirementsState extends State<AdditionalRequirements> {
-  late String flujogramaId;
-
-  Future<String?> _obtenerIdFlujograma(String carreraId) async {
-    print('🔍 Buscando flujograma para carrera: $carreraId');
-    try {
-      final doc = await FirebaseFirestore.instance.collection('carreras').doc(carreraId).get();
-      final flujograma = doc.data()?['flujograma'];
-      print('✅ Flujograma encontrado: $flujograma');
-      return flujograma;
-    } catch (e) {
-      print('❌ Error obteniendo flujograma: $e');
-      return null;
-    }
-  }
+  final userId = FirebaseAuth.instance.currentUser!.uid;
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<String?>(
-      future: _obtenerIdFlujograma(widget.carreraId),
-      builder: (context, snapshotFlujo) {
-        if (snapshotFlujo.hasError) {
-          print('❌ Error en snapshotFlujo: ${snapshotFlujo.error}');
-          return const Center(child: Text('Error cargando flujograma'));
-        }
-        if (!snapshotFlujo.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    return FutureBuilder<QuerySnapshot>(
+      future: FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(userId)
+          .collection('requisitos_adicionales')
+          .get(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) return const Center(child: Text('Error cargando requisitos'));
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
-        flujogramaId = snapshotFlujo.data!;
-        print('📦 Usando flujogramaId: $flujogramaId');
+        final docs = snapshot.data!.docs;
+        final Map<String, Map<String, dynamic>> dataMap = {
+          for (var doc in docs) doc.id: doc.data() as Map<String, dynamic>
+        };
 
-        return FutureBuilder<QuerySnapshot>(
-          future: FirebaseFirestore.instance
-              .collection('flujogramas')
-              .doc(flujogramaId)
-              .collection('requisitos_adicionales')
-              .get(),
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return const Center(child: Text('Error cargando requisitos'));
-            }
-            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-
-            final docs = snapshot.data!.docs;
-            print('📄 Documentos encontrados: ${docs.length}');
-            final Map<String, Map<String, dynamic>> dataMap = {
-              for (var doc in docs) doc.id: doc.data() as Map<String, dynamic>
-            };
-
-            return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Requerimientos Adicionales',
-                    style: GoogleFonts.poppins(
-                      fontSize: 35,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF1E293B),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Gestiona y visualiza el progreso de tus requerimientos académicos adicionales',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w400,
-                      color: const Color(0xFF94A3B8),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  _buildResumen(dataMap),
-                  const SizedBox(height: 30),
-                  if (dataMap.containsKey('idiomas')) _buildIdiomas(dataMap['idiomas']!),
-                  if (dataMap.containsKey('servicio_comunitario')) _buildServicio(dataMap['servicio_comunitario']!),
-                  if (dataMap.containsKey('trabajo_de_tesis')) _buildTesis(dataMap['trabajo_de_tesis']!),
-                ],
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Requerimientos Adicionales',
+                style: GoogleFonts.poppins(fontSize: 35, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B)),
               ),
-            );
-          },
+              const SizedBox(height: 4),
+              Text(
+                'Gestiona y visualiza el progreso de tus requerimientos académicos adicionales',
+                style: GoogleFonts.poppins(fontSize: 16, color: const Color(0xFF94A3B8)),
+              ),
+              const SizedBox(height: 24),
+              _buildResumen(dataMap),
+              const SizedBox(height: 30),
+              if (dataMap.containsKey('idiomas')) _buildIdiomas(dataMap['idiomas']!),
+              if (dataMap.containsKey('servicio_comunitario')) _buildServicio(dataMap['servicio_comunitario']!),
+              if (dataMap.containsKey('trabajo_de_tesis')) _buildTesis(dataMap['trabajo_de_tesis']!),
+            ],
+          ),
         );
       },
     );
@@ -107,9 +65,21 @@ class _AdditionalRequirementsState extends State<AdditionalRequirements> {
     final aprobado1 = idiomas?['idioma_1']?['aprobado'] == true ? 1 : 0;
     final aprobado2 = idiomas?['idioma_2']?['aprobado'] == true ? 1 : 0;
     final idiomasCantidad = idiomas?['cantidad'] ?? 2;
-    final horasServicio = (servicio?['horas'] ?? 0) as int;
+
+    final horasMinimas = servicio?['horas_minimas'] ?? 20;
+    final horasCumplidas = servicio?['horas_cumplidas'] ?? 0;
+
     final entregado = tesis?['entregado'] == true;
-    final progresoTesis = entregado ? 1.0 : 0.0;
+    final Map<String, double> progresoPorEstado = {
+      'No Iniciado': 0.0,
+      'Enviado': 0.25,
+      'Aceptado': 0.50,
+      'Presentado': 0.75,
+      'Aprobado': 1.0,
+      'Reprobado': 0.0,
+    };
+
+    final progresoTesis = progresoPorEstado[tesis?['estado']] ?? 0.0;
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
@@ -117,18 +87,14 @@ class _AdditionalRequirementsState extends State<AdditionalRequirements> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           _buildResumenItem('Idiomas', '${aprobado1 + aprobado2}/$idiomasCantidad', const Color(0xFF2563EB), 'Completados/Total'),
-          _buildResumenItem('Servicio', '$horasServicio/120', const Color(0xFF10B981), 'Horas Completadas'),
+          _buildResumenItem('Servicio', '$horasCumplidas/$horasMinimas', const Color(0xFF10B981), 'Horas Completadas'),
           _buildResumenItem('Tesis', '${(progresoTesis * 100).toStringAsFixed(0)}%', const Color(0xFF8B5CF6), 'Progreso'),
         ],
       ),
@@ -157,8 +123,8 @@ class _AdditionalRequirementsState extends State<AdditionalRequirements> {
     final label2 = idioma2['codigo']?.toString().isNotEmpty == true ? idioma2['codigo'] : 'Idioma 2';
 
     final ref = FirebaseFirestore.instance
-        .collection('flujogramas')
-        .doc(flujogramaId)
+        .collection('usuarios')
+        .doc(userId)
         .collection('requisitos_adicionales')
         .doc('idiomas');
 
@@ -201,40 +167,50 @@ class _AdditionalRequirementsState extends State<AdditionalRequirements> {
   }
 
   Widget _buildServicio(Map<String, dynamic> data) {
-    final horas = data['horas'] ?? 0;
-    final TextEditingController controller = TextEditingController(text: horas.toString());
+    final horasMinimas = data['horas_minimas'] ?? 20;
+    final horasCumplidas = data['horas_cumplidas'] ?? 0;
+    final TextEditingController controller = TextEditingController(text: horasCumplidas.toString());
 
     final ref = FirebaseFirestore.instance
-        .collection('flujogramas')
-        .doc(flujogramaId)
+        .collection('usuarios')
+        .doc(userId)
         .collection('requisitos_adicionales')
         .doc('servicio_comunitario');
 
+    final completado = horasCumplidas >= 120;
+
+    void actualizarHoras(String val) {
+      final parsed = int.tryParse(val);
+      if (parsed != null && parsed >= 0) {
+        final nuevoCompletado = parsed >= 120;
+        ref.update({
+          'horas_cumplidas': parsed,
+          'completado': nuevoCompletado,
+        });
+        setState(() {});
+      }
+    }
+
     return _buildCard(
       titulo: 'Servicio Comunitario',
-      descripcion: 'Completa 120 horas en actividades comunitarias avaladas por la universidad.',
-      estado: (horas >= 120) ? 'Completado' : 'Pendiente',
+      descripcion: 'Completa al menos $horasMinimas horas en actividades comunitarias avaladas por la universidad.',
+      estado: completado ? 'Completado' : 'Pendiente',
       contenido: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           TextField(
             controller: controller,
             keyboardType: TextInputType.number,
+            style: const TextStyle(color: Colors.black),
             decoration: const InputDecoration(
-              labelText: 'Horas completadas',
+              labelText: 'Horas cumplidas',
               labelStyle: TextStyle(color: Colors.black),
             ),
-            onSubmitted: (val) {
-              final parsed = int.tryParse(val);
-              if (parsed != null) {
-                ref.update({'horas': parsed});
-                setState(() {});
-              }
-            },
+            onSubmitted: actualizarHoras,
           ),
           const SizedBox(height: 10),
           LinearProgressIndicator(
-            value: (horas / 120).clamp(0.0, 1.0),
+            value: (horasCumplidas / horasMinimas).clamp(0.0, 1.0),
             minHeight: 6,
             backgroundColor: const Color(0xFFE2E8F0),
             color: const Color(0xFFF59E0B),
@@ -255,41 +231,59 @@ class _AdditionalRequirementsState extends State<AdditionalRequirements> {
     ];
 
     String estado = data['estado'] ?? 'No Iniciado';
-    if (!opciones.contains(estado)) {
-      estado = 'No Iniciado'; // valor por defecto si hay un valor inválido
-    }
-
-    final entregado = data['entregado'] ?? false;
+    if (!opciones.contains(estado)) estado = 'No Iniciado';
 
     final ref = FirebaseFirestore.instance
-        .collection('flujogramas')
-        .doc(flujogramaId)
+        .collection('usuarios')
+        .doc(userId)
         .collection('requisitos_adicionales')
         .doc('trabajo_de_tesis');
+
+    final Map<String, double> progresoPorEstado = {
+      'No Iniciado': 0.0,
+      'Enviado': 0.25,
+      'Aceptado': 0.50,
+      'Presentado': 0.75,
+      'Aprobado': 1.0,
+      'Reprobado': 0.0,
+    };
+
+    final progreso = progresoPorEstado[estado] ?? 0.0;
+    final completado = estado == 'Aprobado';
+    final entregado = estado != 'No Iniciado';
+
+    // ✅ Texto que se muestra en la tarjeta
+    final estadoMostrar = completado ? 'Completado' : 'Pendiente';
 
     return _buildCard(
       titulo: 'Trabajo de Tesis',
       descripcion: 'Selecciona el estado de tu tesis.',
-      estado: estado,
+      estado: estadoMostrar,
       contenido: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           DropdownButton<String>(
             value: estado,
             style: GoogleFonts.poppins(color: Colors.black),
-            items: opciones
-                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                .toList(),
+            items: opciones.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
             onChanged: (val) {
               if (val != null) {
-                ref.update({'estado': val, 'entregado': val != 'No Iniciado'});
+                final nuevoCompletado = val == 'Aprobado';
+                final nuevoEntregado = val != 'No Iniciado';
+
+                ref.update({
+                  'estado': val,
+                  'entregado': nuevoEntregado,
+                  'completado': nuevoCompletado,
+                });
+
                 setState(() {});
               }
             },
           ),
           const SizedBox(height: 8),
           LinearProgressIndicator(
-            value: entregado ? 1.0 : 0.0,
+            value: progreso,
             backgroundColor: const Color(0xFFE2E8F0),
             color: const Color(0xFF8B5CF6),
             minHeight: 6,
@@ -307,7 +301,7 @@ class _AdditionalRequirementsState extends State<AdditionalRequirements> {
     required Widget contenido,
   }) {
     Color estadoColor = const Color(0xFF64748B);
-    if (estado == 'En Progreso') estadoColor = const Color(0xFFF59E0B);
+    if (estado == 'Completado') estadoColor = const Color(0xFF10B981);
     if (estado == 'Pendiente') estadoColor = const Color(0xFFFF9800);
     if (estado == 'No Iniciado') estadoColor = const Color(0xFF64748B);
 

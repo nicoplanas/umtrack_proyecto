@@ -1314,7 +1314,7 @@ class _FlowgramState extends State<Flowgram> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return AdditionalRequirements(carreraId: _carreraId!);
+    return AdditionalRequirements();
   }
 
   Widget _leyendaItem(String texto, Color color) {
