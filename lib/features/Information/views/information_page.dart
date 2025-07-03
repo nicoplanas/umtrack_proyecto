@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../../core/widgets/footer.dart';
+import '../../../core/widgets/navbar.dart';
 import '../models/faq_item.dart';
 import '../widgets/faq_card.dart';
-import '../../../core/widgets/navbar.dart';
 
 class InformationPage extends StatefulWidget {
   const InformationPage({super.key});
@@ -13,10 +14,72 @@ class InformationPage extends StatefulWidget {
 }
 
 class _InformationPageState extends State<InformationPage> {
+  // Controladores de búsqueda
   final TextEditingController _searchController = TextEditingController();
-  late Map<String, List<FAQItem>> _categorizedFaqItems;
-  late Map<String, List<FAQItem>> _filteredCategorizedFaqItems;
+  final TextEditingController _searchFeriaController = TextEditingController();
 
+  // FAQs Feria clasificadas justo como los definiste
+  final Map<String, List<FAQItem>> _categorizedFeriaFaqItems = {
+    'Desayuno': [
+      FAQItem(
+        question: 'Local A',
+        answer: 'Nombre:Empanaditas, Horario: 7am a 5pm, Tipo de comida: empanadas y desayunos, Precios(dolares):empanadas 1,5/cafe 1/cachitos 2/jugos 2,5',
+      ),
+      FAQItem(
+        question: 'Local E',
+        answer: 'Nombre:UnimetTotal ,Horario:8am a 7:30pm , Tipo de comida: desayunos y almuerzos , Precios(dolares):empanadas 1,5/Hamburguesas 5,5/tequeños 4',
+      ),
+      FAQItem(
+        question: 'Local F',
+        answer: 'Nombre:PanUnimet ,Horario:8am a 5pm , Tipo de comida: Pasteleria , Precios(dolares):Cachitos 3,5/Panes 5/MiniLunch 5',
+      ),
+      FAQItem(
+        question: 'Local H',
+        answer: 'Nombre:EmpanadasUnimet ,Horario:7am a 4pm , Tipo de comida: empanadas , Precios(dolares):Empanada de queso 1,5/Empanada de carne 2,5/Empanada de pollo 2,5',
+      ),
+    ],
+    'Almuerzos': [
+      FAQItem(
+        question: 'Local B',
+        answer: 'Nombre:PinchoPan ,Horario:10am a 6pm , Tipo de comida: Shawarmas y hamburguesas , Precios(dolares):Shawarmas 6/Hamburguesas 6/ Combo Shawarmma 11/ Combo Hamburguesas 11,5',
+      ),
+      FAQItem(
+        question: 'Local D',
+        answer: 'Nombre:PizzasUnimet ,Horario:11am a 7pm , Tipo de comida: Pizzas , Precios(dolares):Un Slice 3,5/Dos Slice 6,5/Pizza completa 16',
+      ),
+      FAQItem(
+        question: 'Local G',
+        answer: 'Nombre:Bowl ,Horario:10am a 7pm , Tipo de comida: Bowls de sushi/pollo/carne , Precios(dolares):Bowl pollo 7,5/Bowl carne 7,5/Bowl sushi(pescado) 8,5',
+      ),
+      FAQItem(
+        question: 'Local J',
+        answer: 'Nombre:PokeSushi ,Horario:10am a 6:30pm , Tipo de comida: Pokes y sushi , Precios(dolares):Poke pequeño 6/Poke mediano 8,5/Poke grande 12',
+      ),
+    ],
+    'Dulces': [
+      FAQItem(
+        question: 'Local C',
+        answer: 'Nombre:Chip a Cookie ,Horario: 9:30am a 6pm , Tipo de comida: galletas , Precios(dolares): 3_galletas 4,5/6_galletas 7/12_galletas 12',
+      ),
+      FAQItem(
+        question: 'Local I',
+        answer: 'Nombre:Dey Donuts ,Horario: 10am a 6:30pm , Tipo de comida: donas , Precios(dolares):dona glaseada 2/dona rellena 3,5/ dona con chispas 3',
+      ),
+    ],
+    'Ubicaciones Extra': [
+      FAQItem(
+        question: 'Baños',
+        answer: 'Los baños se situan debajo del local J, tanto para mujeres y hombres, esta abierto mientras la universidad este abierta',
+      ),
+      FAQItem(
+        question: 'Microondas',
+        answer: 'Los microondas se situan debajo de los baños, justo a su derecha, hay varios microondas que se pueden utilizar',
+      ),
+    ],
+  };
+  late Map<String, List<FAQItem>> _filteredFeriaFaqItems;
+
+  // FAQs generales categorizadas (tu lista original completa)
   final Map<String, List<FAQItem>> _allCategorizedFaqItems = {
     'Servicios y Trámites': [
       FAQItem(
@@ -36,8 +99,68 @@ class _InformationPageState extends State<InformationPage> {
         answer: 'Reservar un cubículo en la biblioteca es un proceso sencillo. Puedes hacerlo a través del sistema de reservas en línea, accesible desde el portal oficial de la biblioteca, o si lo prefieres, puedes dirigirte directamente al mostrador de atención al usuario para consultar la disponibilidad y realizar tu reserva de forma presencial.',
       ),
       FAQItem(
-        question: 'Contactos claves',
-        answer: 'Secretaría: secretaria@universidad.edu, Soporte TI: soporte@universidad.edu.',
+        question: 'Contactos Clave de la UNIMET',
+        answer: '''
+**Contactos Generales y Administrativos**
+  * Central Telefónica UNIMET:
+    * (0212) 241.48.33
+    * (0212) 242.33.42
+    * (0212) 241.59.85
+  * Admisiones:
+    * Teléfono: (0412)-240.32.01
+    * Correo: admision@unimet.edu.ve
+  * Vicerrectorado Administrativo:
+    * Correo: mescalona@unimet.edu.ve (María Gabriela Escalona, Vicerrectora)
+    * Asistentes:
+      * Teresa Guedez: tguedez@unimet.edu.ve / (0212)-240.32.51
+      * Gloria Carballeira: gcarballeira@unimet.edu.ve / (0212)-240.34.01
+  * Secretaría General:
+    * Correo: sperera@unimet.edu.ve (Luis Santiago Perera, Secretario General)
+  * Dirección de Finanzas (Caja UNIMET):
+    * Correo: anieves@unimet.edu.ve (Alexandra Nieves, Directora)
+    * Gerencia de Tesorería y Cobranzas: (0212)-240.36.82
+    * Gerencia de Contabilidad: (0212)-240.34.56
+  * Servicios (Infraestructura, etc.):
+    * Correo: igmendozar@unimet.edu.ve (Indira Mendoza, Directora)
+    * Teléfono: (0212)-240.37.13
+    * Asistente: (0212)-240.37.11
+
+**Contactos para Estudiantes**
+  * Decanato de Estudiantes:
+    * Correo: dec-est@unimet.edu.ve
+    * Correo de Vinculación Universitaria: vinculacionuniversitaria@unimet.edu.ve
+  * Dirección de Desarrollo y Bienestar Estudiantil (DDBE):
+    * Correo: ddbe@unimet.edu.ve
+    * Teléfono: (0212)-240.32.71 (Gerencia)
+    * Asesoramiento Grupal: (0212)-240.37.96
+    * Asesoramiento Individual: (0212)-240.39.19 / (0212)-240.32.84 (Recepción)
+  * Control de Estudios (Dirección de Registro y Control de Estudios):
+    * Pregrado: pregrado@unimet.edu.ve / (0212)-240.32.93 / 240.32.58
+    * Postgrado: postgrado@unimet.edu.ve / (0212)-240.36.51 / 240.36.06
+  * Pasantías:
+    * Correo general de Pasantías: pasantias@unimet.edu.ve
+    * Correo Internship UNIMET: internship@unimet.edu.ve
+    * Feria de Empleos y Pasantías: empleamet@unimet.edu.ve
+  * Solicitud de Documentos (Notas Certificadas, Programas):
+    * Teléfonos: (0212)-240.32.60 / 240.32.61 / 0212)-240.32.93 / 240.36.51 / 240.36.06
+    * Correo para programas certificados: programas@unimet.edu.ve
+    * Correo para revisión de expediente: revisiondedocumentos@unimet.edu.ve
+    * Taquilla de Grado (entrega de documentos): (0212)-240.32.98 / 240.32.54
+  * Biblioteca Pedro Grases:
+    * Teléfonos: (0212)- 240 3433 / 3434
+    * Correo para solvencias: solvenciasbpg@unimet.edu.ve
+  * CIUNIMET (Objetos perdidos y encontrados):
+    * Correo: ciunimet@unimet.edu.ve
+    * Teléfonos: (0212)-240.39.76 / 240.32.76
+
+**Decanatos y Facultades (Ejemplos)**
+  * Facultad de Ciencias (Decano):
+    * Correo: pcertad@unimet.edu.ve (Pedro Certad)
+    * Teléfonos: (0212)-240.38.79 / 240.39.97
+  * Facultad de Humanidades (Decano):
+    * Correo: mbriceno@unimet.edu.ve (Milagros Briceño)
+    * Teléfono: (0212)-240.34.94
+            ''',
       ),
     ],
     'Ubicación de Edificios y Laboratorios': [
@@ -59,11 +182,7 @@ class _InformationPageState extends State<InformationPage> {
       ),
       FAQItem(
         question: '¿Dónde queda ubicado el Laboratorio de computacion?',
-        answer: 'La UNIMET cuenta con diversos laboratorios de computación distribuidos, siendo el Centro Mundo X un ejemplo de un espacio dedicado a la experimentación con tecnologías avanzadas. Algunos laboratorios especializados, como el Laboratorio de Neurociencias, que utiliza equipos de computación de alto desempeño, se encuentran adscritos a sus respectivos departamentos dentro del campus. En la imagen se ve un laboratorio de Metaverso',
-      ),
-      FAQItem(
-        question: 'Ubicaciones claves de la universidad',
-        answer: 'Se divide en edificios y laboratorios, teniendo el edificio Eugenio Mendoza, el A1 y el A2, y dos laboratorios muy importantes siendo estos el laboratorio de Quimica y de computacion',
+        answer: 'La UNIMET cuenta con diversos laboratorios de computación distribuidos, siendo el Centro Mundo X un ejemplo de un espacio dedicado a la experimentación con tecnologías avanzadas. Algunos laboratorios especializados, como el Laboratorio de Neurociencias, que utiliza equipos de computación de alto desempeño, se encuentran adscritos a sus respectivos departamentos dentro del campus.',
       ),
     ],
     'Servicios Generales': [
@@ -73,35 +192,54 @@ class _InformationPageState extends State<InformationPage> {
       ),
     ],
   };
+  late Map<String, List<FAQItem>> _filteredCategorizedFaqItems;
 
   @override
   void initState() {
     super.initState();
-    _categorizedFaqItems = _allCategorizedFaqItems;
-    _filteredCategorizedFaqItems = _categorizedFaqItems;
-    _searchController.addListener(_filterFaqItems);
-  }
 
-  void _filterFaqItems() {
-    final query = _normalize(_searchController.text.trim().toLowerCase());
-    setState(() {
-      _filteredCategorizedFaqItems = {};
-      _categorizedFaqItems.forEach((category, items) {
-        final filteredItems = items.where((item) {
-          final normalizedQuestion = _normalize(item.question.toLowerCase());
-          return normalizedQuestion.contains(query);
-        }).toList();
-        if (filteredItems.isNotEmpty) {
-          _filteredCategorizedFaqItems[category] = filteredItems;
-        }
+    // Inicializar filtros Feria y FAQ generales
+    _filteredFeriaFaqItems = _categorizedFeriaFaqItems;
+    _filteredCategorizedFaqItems = _allCategorizedFaqItems;
+
+    _searchFeriaController.addListener(() {
+      final q = _normalize(_searchFeriaController.text.trim().toLowerCase());
+      setState(() {
+        _filteredFeriaFaqItems = {};
+        _categorizedFeriaFaqItems.forEach((category, items) {
+          final filtered = items.where((item) => _normalize(item.question.toLowerCase()).contains(q)).toList();
+          if (filtered.isNotEmpty) {
+            _filteredFeriaFaqItems[category] = filtered;
+          }
+        });
+      });
+    });
+
+    _searchController.addListener(() {
+      final q = _normalize(_searchController.text.trim().toLowerCase());
+      setState(() {
+        _filteredCategorizedFaqItems = {};
+        _allCategorizedFaqItems.forEach((category, items) {
+          final filtered = items.where((item) => _normalize(item.question.toLowerCase()).contains(q)).toList();
+          if (filtered.isNotEmpty) {
+            _filteredCategorizedFaqItems[category] = filtered;
+          }
+        });
       });
     });
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFeriaController.dispose();
+    super.dispose();
+  }
+
   String _normalize(String input) {
-    final withDiacritics = 'áéíóúüñÁÉÍÓÚÜÑ';
-    final withoutDiacritics = 'aeiouunAEIOUUN';
-    for (int i = 0; i < withDiacritics.length; i++) {
+    const withDiacritics = 'áéíóúüñÁÉÍÓÚÜÑ';
+    const withoutDiacritics = 'aeiouunAEIOUUN';
+    for (var i = 0; i < withDiacritics.length; i++) {
       input = input.replaceAll(withDiacritics[i], withoutDiacritics[i]);
     }
     return input;
@@ -116,9 +254,103 @@ class _InformationPageState extends State<InformationPage> {
           children: [
             const Navbar(),
             const SizedBox(height: 30),
+
+            // Título Feria
             Text(
-              'Preguntas Frecuentes',
-              style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black),
+              'FERIA',
+              style: GoogleFonts.poppins(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Mapa de la feria
+            Image.asset(
+              'assets/mapaferia.png',
+              height: 300,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(height: 24),
+
+            // Sección FAQs Feria clasificada
+            Center(
+              child: Text(
+                'Preguntas de la Feria',
+                style: GoogleFonts.poppins(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: TextField(
+                controller: _searchFeriaController,
+                style: const TextStyle(color: Colors.black),
+                decoration: InputDecoration(
+                  hintText: 'Buscar en Feria...',
+                  hintStyle: const TextStyle(color: Colors.black45),
+                  prefixIcon: const Icon(Icons.search, color: Colors.black45),
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.deepPurple.shade200),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.deepPurple.shade400),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Column(
+              children: _filteredFeriaFaqItems.entries.map((entry) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            entry.key,
+                            style: GoogleFonts.poppins(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.deepOrange.shade900,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      ...entry.value.map((item) => FAQCard(
+                        item: item,
+                        backgroundColor: const Color(0xFFFFF3E0),
+                        questionColor: Colors.black,
+                        answerColor: Colors.black,
+                      )),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 24),
+
+            // Sección Preguntas Frecuentes generales
+            Center(
+              child: Text(
+                'Preguntas Frecuentes Sobre La Universidad',
+                style: GoogleFonts.poppins(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
             ),
             const SizedBox(height: 10),
             Padding(
@@ -130,9 +362,7 @@ class _InformationPageState extends State<InformationPage> {
                   hintText: 'Buscar pregunta...',
                   hintStyle: const TextStyle(color: Colors.black45),
                   prefixIcon: const Icon(Icons.search, color: Colors.black45),
-                  filled: true,
-                  fillColor: Colors.grey.shade200,
-                  enabledBorder: OutlineInputBorder(
+                  border: OutlineInputBorder(
                     borderSide: BorderSide(color: Colors.deepPurple.shade200),
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -176,6 +406,7 @@ class _InformationPageState extends State<InformationPage> {
                 );
               }).toList(),
             ),
+
             const SizedBox(height: 40),
             const Footer(),
           ],
