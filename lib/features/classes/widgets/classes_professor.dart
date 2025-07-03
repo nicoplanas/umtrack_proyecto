@@ -120,104 +120,152 @@ class ClassesProfessor extends StatelessWidget {
                           },
                           child: Container(
                             margin: const EdgeInsets.only(bottom: 24),
-                            padding: const EdgeInsets.all(20),
+                            padding: const EdgeInsets.all(24),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black12.withOpacity(0.08),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 4),
+                                  color: Colors.black12.withOpacity(0.06),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 6),
                                 )
                               ],
+                              border: const Border(
+                                left: BorderSide(color: Color(0xFFF97316), width: 4),
+                              ),
                             ),
-                            child: Row(
+                            child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Expanded left section
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                    children: [
-                                      Text(nombre,
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                            color: const Color(0xFF0F172A),
-                                          )),
-                                      const SizedBox(height: 4),
-                                      Text(aula,
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 14,
-                                            color: const Color(0xFF64748B),
-                                          )),
-                                      const SizedBox(height: 12),
-                                      Row(
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 10, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFFFFEDD5),
-                                              borderRadius:
-                                              BorderRadius.circular(16),
-                                            ),
-                                            child: Text(
-                                              horaInicio,
+                                          Text(nombre,
                                               style: GoogleFonts.poppins(
-                                                fontSize: 12,
+                                                fontSize: 25,
+                                                fontWeight: FontWeight.w700,
+                                                color: const Color(0xFF0F172A),
+                                              )),
+                                          const SizedBox(height: 12),
+                                          Text('Prof. ${clase['profesorNombre']} - Aula $aula',
+                                              style: GoogleFonts.poppins(
+                                                  fontSize: 14,
+                                                  color: const Color(0xFF94A3B8))),
+                                          const SizedBox(height: 8),
+                                          Text('Horario',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 13,
                                                 fontWeight: FontWeight.w600,
-                                                color: const Color(0xFFFB923C),
+                                                color: const Color(0xFF0F172A),
+                                              )),
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                    horizontal: 12, vertical: 6),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFFFFEDD5),
+                                                  borderRadius: BorderRadius.circular(20),
+                                                ),
+                                                child: Text(
+                                                  horaInicio,
+                                                  style: GoogleFonts.poppins(
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: const Color(0xFFF97316),
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                    horizontal: 12, vertical: 6),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFFE2E8F0),
+                                                  borderRadius: BorderRadius.circular(20),
+                                                ),
+                                                child: Text(
+                                                  dias,
+                                                  style: GoogleFonts.poppins(
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.w500,
+                                                    color: const Color(0xFF475569),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          )
+                                        ],
+                                      ),
+                                    ),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              "$progreso",
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 25,
+                                                fontWeight: FontWeight.bold,
+                                                color: const Color(0xFFF97316), // Naranja fuerte
                                               ),
                                             ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Text(dias,
+                                            Text(
+                                              "%",
                                               style: GoogleFonts.poppins(
-                                                fontSize: 12,
-                                                color: const Color(0xFF64748B),
-                                              )),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 20),
-                                      Row(
-                                        mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          _infoBox("Estudiantes",
-                                              estudiantes.toString()),
-                                          _infoBox("Evaluaciones",
-                                              evaluaciones.toString()),
-                                          _infoBox("Pendientes",
-                                              pendientes.toString()),
-                                        ],
-                                      )
-                                    ],
-                                  ),
-                                ),
-                                // Right progress percentage
-                                Container(
-                                  alignment: Alignment.topRight,
-                                  margin: const EdgeInsets.only(left: 12),
-                                  child: Column(
-                                    children: [
-                                      Text(
-                                        "${progreso.toString()}%",
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                          color: const Color(0xFFF97316),
+                                                fontSize: 25,
+                                                fontWeight: FontWeight.bold,
+                                                color: const Color(0xFFF97316), // Mismo color
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                      ),
-                                      Text("Progreso del curso",
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          "Acumulado",
                                           style: GoogleFonts.poppins(
                                             fontSize: 12,
-                                            color: const Color(0xFF64748B),
-                                          )),
-                                    ],
-                                  ),
+                                            color: const Color(0xFF94A3B8), // Gris claro
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 20),
+                                Row(
+                                  children: [
+                                    _infoBox('Estudiantes', estudiantes.toString()),
+                                    const SizedBox(width: 12),
+                                    _infoBox("Evaluaciones", evaluaciones.toString()),
+                                    const SizedBox(width: 12),
+                                    _infoBox("Pendientes", pendientes.toString()),
+                                  ],
+                                ),
+                                const SizedBox(height: 20),
+                                const Divider(color: Color(0xFFE2E8F0), thickness: 1),
+                                const SizedBox(height: 10),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text("Ver detalles",
+                                        style: GoogleFonts.poppins(
+                                            fontSize: 14,
+                                            color: const Color(0xFFF97316),
+                                            fontWeight: FontWeight.w500)),
+                                    const Icon(Icons.arrow_forward_ios_rounded,
+                                        color: Color(0xFFF97316), size: 16)
+                                  ],
                                 )
                               ],
                             ),
@@ -236,26 +284,32 @@ class ClassesProfessor extends StatelessWidget {
 
   Widget _infoBox(String label, String value) {
     return Container(
-      width: 90,
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      width: 350, // puedes ajustar este valor
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value,
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF0F172A),
-              )),
-          const SizedBox(height: 4),
-          Text(label,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: const Color(0xFF64748B),
-              )),
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: const Color(0xFF64748B),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF0F172A),
+            ),
+          ),
         ],
       ),
     );

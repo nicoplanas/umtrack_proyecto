@@ -10,6 +10,8 @@ import '../../features/classes/views/classes_page.dart';
 import '../../features/Information/views/information_page.dart';
 import '../../features/classes/views/classes_professor_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../core/widgets/show_messages_popup.dart';
+import '../../features/auth/views/sign_up_page.dart';
 
 class Navbar extends StatefulWidget {
   final String? email;
@@ -198,18 +200,15 @@ class _NavbarState extends State<Navbar> {
                 );
               }),
               const SizedBox(width: 8),
-              IconButton(
-                icon: const Icon(Icons.forum, color: Color(0xFF1E293B), size: 26),
-                tooltip: 'Chat',
-                onPressed: () {
-                  // TODO: Navegar a la pantalla de chat o mostrar un mensaje
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Función de chat en desarrollo')),
-                  );
-                },
-              ),
-              const SizedBox(width: 8),
               if (email != null) ...[
+                IconButton(
+                  icon: const Icon(Icons.forum, color: Color(0xFF1E293B), size: 26),
+                  tooltip: 'Chat',
+                  onPressed: () {
+                    showMessagesPopup(context); // Llama al popup
+                  },
+                ),
+                const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.notifications_outlined, color: Color(0xFF1E293B), size: 28),
                   tooltip: 'Notificaciones',
@@ -228,6 +227,27 @@ class _NavbarState extends State<Navbar> {
                     MaterialPageRoute(builder: (context) => const LoginScreen()),
                   );
                 }),
+                const SizedBox(width: 12),
+                OutlinedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const SignUpPage()),
+                    );
+                  },
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    side: const BorderSide(color: Color(0xFFFD8305)),
+                  ),
+                  child: Text(
+                    'Registrarse',
+                    style: GoogleFonts.poppins(
+                      color: const Color(0xFFFD8305),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
               ],
             ],
           ),

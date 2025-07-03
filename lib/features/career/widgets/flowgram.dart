@@ -1,8 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
+import '../../career/widgets/additional_requirements.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'dart:ui' as ui;
+import 'dart:typed_data';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:pdf/pdf.dart';
+import 'package:printing/printing.dart';
 
 class Flowgram extends StatefulWidget {
   final String carreraId;
@@ -30,6 +39,9 @@ class _FlowgramState extends State<Flowgram> {
   int _totalCreditos = 0;
   int _creditosDesdeBD = 0;
   int _vistaSeleccionada = 0;
+  String? _carreraId;
+  bool _modoEdicion = false;
+  final GlobalKey _flujogramaKey = GlobalKey();
 
   SelectionMode _selectionMode = SelectionMode.none;
 
@@ -40,6 +52,7 @@ class _FlowgramState extends State<Flowgram> {
     _obtenerMateriasAprobadas();
     _obtenerMateriasTrimestreActual();
     _obtenerCreditosDesdeBD();
+    _loadCarreraId();
   }
 
   Widget _buildMateriasUI() {
@@ -83,21 +96,38 @@ class _FlowgramState extends State<Flowgram> {
 
     return GestureDetector(
       onHorizontalDragStart: (_) {},
-      child: InteractiveViewer(
-        constrained: false,
-        scaleEnabled: false,
-        panEnabled: true,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: RepaintBoundary(
+        key: _flujogramaKey, // <-- asegúrate de tener esto definido arriba
+        child: InteractiveViewer(
+          constrained: false,
+          scaleEnabled: false,
+          panEnabled: true,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 56), // para no tapar los títulos
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
             ...materiasReasignadas.entries.map((entry) {
               final trimestreIndex = entry.key;
               final grupo = entry.value;
 
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: SizedBox(
+                child: Container(
                   width: 240,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Color(0xFFE2E8F0), width: 1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -118,7 +148,8 @@ class _FlowgramState extends State<Flowgram> {
 
                         return DragTarget<Map<String, dynamic>>(
                           onWillAccept: (_) => true,
-                          onAccept: (dragged) async {
+                          onAccept: _modoEdicion
+                              ? (dragged) async {
                             if (grupo.length >= 7 &&
                                 !_materiaYaExisteEnGrupo(grupo, dragged['codigo'])) {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -135,11 +166,13 @@ class _FlowgramState extends State<Flowgram> {
                               trimestreIndex,
                               indexMateria,
                             );
-                          },
+                          }
+                              : null,
                           builder: (context, candidateData, rejectedData) {
                             return Padding(
                               padding: const EdgeInsets.symmetric(vertical: 6),
-                              child: Draggable<Map<String, dynamic>>(
+                              child: _modoEdicion
+                                  ? Draggable<Map<String, dynamic>>(
                                 data: materia,
                                 feedback: Opacity(
                                   opacity: 0.8,
@@ -147,14 +180,16 @@ class _FlowgramState extends State<Flowgram> {
                                 ),
                                 childWhenDragging: const SizedBox.shrink(),
                                 child: _buildMateriaButton(materia),
-                              ),
+                              )
+                                  : _buildMateriaButton(materia),
                             );
                           },
                         );
                       }).toList(),
                       DragTarget<Map<String, dynamic>>(
                         onWillAccept: (_) => true,
-                        onAccept: (dragged) async {
+                        onAccept: _modoEdicion
+                            ? (dragged) async {
                           if (grupo.length >= 7 &&
                               !_materiaYaExisteEnGrupo(grupo, dragged['codigo'])) {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -171,7 +206,8 @@ class _FlowgramState extends State<Flowgram> {
                             trimestreIndex,
                             grupo.length,
                           );
-                        },
+                        }
+                            : null,
                         builder: (context, candidateData, rejectedData) =>
                         const SizedBox(height: 24),
                       ),
@@ -182,49 +218,54 @@ class _FlowgramState extends State<Flowgram> {
             }),
 
             // NUEVO TRIMESTRE DINÁMICO: espacio adicional al final para crear nuevo trimestre
-            // Al final del Row de columnas
-            Padding(
-              padding: const EdgeInsets.only(top: 52), // Ajusta este valor hasta que esté alineado
-              child: SizedBox(
-                width: 240,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    DragTarget<Map<String, dynamic>>(
-                      onWillAccept: (_) => true,
-                      onAccept: (dragged) async {
-                        await _actualizarPosicionMateria(
-                          dragged['codigo'],
-                          _materiasLocales.map((m) => m['trimestre'] as int).fold(0, (prev, e) => e > prev ? e : prev) + 1,
-                          0,
-                        );
-                      },
-                      builder: (context, candidateData, rejectedData) {
-                        return Container(
-                          height: 48,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '+ Agregar trimestre nuevo',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: const Color(0xFF94A3B8),
+            if (_modoEdicion)
+              Padding(
+                padding: const EdgeInsets.only(top: 52),
+                child: SizedBox(
+                  width: 240,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      DragTarget<Map<String, dynamic>>(
+                        onWillAccept: (_) => true,
+                        onAccept: (dragged) async {
+                          await _actualizarPosicionMateria(
+                            dragged['codigo'],
+                            _materiasLocales
+                                .map((m) => m['trimestre'] as int)
+                                .fold(0, (prev, e) => e > prev ? e : prev) +
+                                1,
+                            0,
+                          );
+                        },
+                        builder: (context, candidateData, rejectedData) {
+                          return Container(
+                            height: 48,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
+                            child: Text(
+                              '+ Agregar trimestre nuevo',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF94A3B8),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),
+    ),
+    ),
     );
   }
 
@@ -233,6 +274,34 @@ class _FlowgramState extends State<Flowgram> {
     return grupo.any((m) => m['codigo'] == codigo);
   }
 
+  Future<void> _loadCarreraId() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc = await FirebaseFirestore.instance.collection('usuarios').doc(user.uid).get();
+      final data = doc.data();
+      if (data != null && data['major'] != null) {
+        setState(() {
+          _carreraId = data['major'];
+        });
+      }
+    }
+  }
+
+  void _mostrarCargando(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        content: Row(
+          children: const [
+            CircularProgressIndicator(),
+            SizedBox(width: 20),
+            Expanded(child: Text("Generando PDF...")),
+          ],
+        ),
+      ),
+    );
+  }
 
   Future<void> _obtenerCreditosDesdeBD() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -254,6 +323,43 @@ class _FlowgramState extends State<Flowgram> {
     setState(() {
       _vistaSeleccionada = index;
     });
+  }
+
+  Future<void> _exportarFlujogramaComoPDF() async {
+    try {
+      final boundary = _flujogramaKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      final image = await boundary.toImage(pixelRatio: 3.0); // Usa 2.0–3.0 para mejor calidad
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      final pngBytes = byteData!.buffer.asUint8List();
+
+      final imageWidth = image.width.toDouble();
+      final imageHeight = image.height.toDouble();
+
+      final pdf = pw.Document();
+      final imageProvider = pw.MemoryImage(pngBytes);
+
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat(imageWidth, imageHeight), // ¡Se ajusta al tamaño exacto!
+          build: (pw.Context context) {
+            return pw.Center(
+              child: pw.Image(imageProvider, fit: pw.BoxFit.contain),
+            );
+          },
+        ),
+      );
+
+      Navigator.of(context, rootNavigator: true).pop(); // Cierra loading
+
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => pdf.save(),
+      );
+    } catch (e) {
+      Navigator.of(context, rootNavigator: true).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al exportar PDF: $e')),
+      );
+    }
   }
 
   Future<void> _cargarMateriasYActualizarEstado() async {
@@ -1203,6 +1309,14 @@ class _FlowgramState extends State<Flowgram> {
     );
   }
 
+  Widget _buildRequerimientosAdicionales() {
+    if (_carreraId == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return AdditionalRequirements(carreraId: _carreraId!);
+  }
+
   Widget _leyendaItem(String texto, Color color) {
     return Row(
       children: [
@@ -1399,18 +1513,21 @@ class _FlowgramState extends State<Flowgram> {
                 ),
                 const SizedBox(height: 24),
 
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 24),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildVistaButton('Flujograma', 0),
-                      const SizedBox(width: 16),
-                      _buildVistaButton('Historial Académico', 1),
-                    ],
+                if (!_modoEdicion)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildVistaButton('Flujograma', 0),
+                        const SizedBox(width: 16),
+                        _buildVistaButton('Historial Académico', 1),
+                        const SizedBox(width: 16),
+                        _buildVistaButton('Requerimientos Adicionales', 2),
+                      ],
+                    ),
                   ),
-                ),
-                if (_vistaSeleccionada == 0)
+                if (_vistaSeleccionada == 0 && _modoEdicion)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -1502,15 +1619,134 @@ class _FlowgramState extends State<Flowgram> {
                       ),
                     ],
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: _cargandoMaterias
-                        ? const Center(child: CircularProgressIndicator())
-                        : _materiasLocales.isEmpty
-                        ? const Center(child: Text('No se encontraron materias'))
-                        : _vistaSeleccionada == 0
-                        ? _buildMateriasUI()
-                        : _buildHistorialAcademico(),
+                  child: Stack(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: _cargandoMaterias
+                            ? const Center(child: CircularProgressIndicator())
+                            : _materiasLocales.isEmpty
+                            ? const Center(child: Text('No se encontraron materias'))
+                            : _vistaSeleccionada == 0
+                            ? _buildMateriasUI()
+                            : _vistaSeleccionada == 1
+                            ? _buildHistorialAcademico()
+                            : _buildRequerimientosAdicionales(),
+                      ),
+                      // Menú de tres puntos
+                      if (_vistaSeleccionada == 0)
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: Container(
+                            height: 48,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(16),
+                                topRight: Radius.circular(16),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Color(0x11000000),
+                                  blurRadius: 4,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            alignment: Alignment.centerRight,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.fullscreen, color: Color(0xFF475569)),
+                                  tooltip: 'Expandir Flujograma',
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      barrierDismissible: true,
+                                      builder: (_) {
+                                        return Dialog(
+                                          insetPadding: const EdgeInsets.all(16),
+                                          backgroundColor: Colors.white,
+                                          child: ConstrainedBox(
+                                            constraints: BoxConstraints(
+                                              maxWidth: MediaQuery.of(context).size.width * 0.95,
+                                              maxHeight: MediaQuery.of(context).size.height * 0.85,
+                                            ),
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(24),
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  // Header con cerrar
+                                                  Row(
+                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                    children: [
+                                                      Text(
+                                                        'Vista Ampliada del Flujograma',
+                                                        style: GoogleFonts.poppins(
+                                                          fontSize: 18,
+                                                          fontWeight: FontWeight.w600,
+                                                          color: const Color(0xFF1E293B),
+                                                        ),
+                                                      ),
+                                                      IconButton(
+                                                        icon: const Icon(Icons.close),
+                                                        onPressed: () => Navigator.of(context).pop(),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 12),
+                                                  // Flujograma expandido con scroll horizontal
+                                                  Flexible(
+                                                    child: SingleChildScrollView(
+                                                      scrollDirection: Axis.horizontal,
+                                                      child: _buildMateriasUI(),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    );
+                                  },
+                                ),
+                                PopupMenuButton<String>(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  onSelected: (value) {
+                                    if (value == 'editar') {
+                                      setState(() {
+                                        _modoEdicion = !_modoEdicion;
+                                        _selectionMode = SelectionMode.none;
+                                      });
+                                    } else if (value == 'pdf') {
+                                      _exportarFlujogramaComoPDF();
+                                    }
+                                  },
+                                  itemBuilder: (context) => [
+                                    PopupMenuItem(
+                                      value: 'editar',
+                                      child: Text(_modoEdicion ? 'Salir del Modo Edición' : 'Editar'),
+                                    ),
+                                    const PopupMenuItem(
+                                      value: 'pdf',
+                                      child: Text('Descargar PDF'),
+                                    ),
+                                  ],
+                                  icon: const Icon(Icons.more_vert),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 32), // Espaciado visual

@@ -52,7 +52,6 @@ class _AdditionalRequirementsState extends State<AdditionalRequirements> {
               .get(),
           builder: (context, snapshot) {
             if (snapshot.hasError) {
-              print('❌ Error obteniendo requisitos: ${snapshot.error}');
               return const Center(child: Text('Error cargando requisitos'));
             }
             if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
@@ -62,9 +61,8 @@ class _AdditionalRequirementsState extends State<AdditionalRequirements> {
             final Map<String, Map<String, dynamic>> dataMap = {
               for (var doc in docs) doc.id: doc.data() as Map<String, dynamic>
             };
-            print('🧩 Claves encontradas: ${dataMap.keys}');
 
-            return Padding(
+            return SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../auth/views/sign_up_page.dart';
+import '../../../features/Information/views/information_page.dart';
 
 class InfoSection extends StatelessWidget {
   const InfoSection({super.key});
@@ -61,7 +62,12 @@ class InfoSection extends StatelessWidget {
                         ),
                         const SizedBox(width: 20),
                         OutlinedButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const InformationPage()),
+                            );
+                          },
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: Color(0xFFFD8305)),
                             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),

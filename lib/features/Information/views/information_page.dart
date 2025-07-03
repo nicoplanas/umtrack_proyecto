@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
 import '../../../core/widgets/footer.dart';
 import '../../../core/widgets/navbar.dart';
 import '../models/faq_item.dart';

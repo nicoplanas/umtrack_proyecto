@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '/features/landing/views/landing_page.dart';
 import 'package:flutter/cupertino.dart';
+import '../../auth/views/log_in_page.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -565,17 +566,26 @@ class _SignUpPageState extends State<SignUpPage> {
                           ),
                         ),
                         const SizedBox(height: 16),
+
+
+
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              '¿Ya tienes una cuenta? ',
-                              style: GoogleFonts.poppins(fontSize: 14, color: Colors.black),
+                              "¿Ya tienes una cuenta?",
+                              style: GoogleFonts.poppins(
+                                  fontSize: 14, color: Colors.black),
                             ),
-                            GestureDetector(
-                              onTap: () => Navigator.pop(context),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.push(context,
+                                  MaterialPageRoute(
+                                      builder: (context) => const LoginScreen()),
+                                );
+                              },
                               child: Text(
-                                'Inicia sesión aquí',
+                                "Inicia sesión aquí",
                                 style: GoogleFonts.poppins(
                                   fontSize: 14,
                                   color: const Color(0xFFFD8305),
@@ -592,7 +602,6 @@ class _SignUpPageState extends State<SignUpPage> {
               ),
             ),
           ),
-
 
           // LADO DERECHO: PANEL NARANJA
           Expanded(

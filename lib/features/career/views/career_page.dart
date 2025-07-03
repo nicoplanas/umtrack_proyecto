@@ -54,7 +54,6 @@ class CareerPage extends StatelessWidget {
                       children: [
                         Navbar(email: email),
                         Flowgram(carreraId: carreraId),
-                        AdditionalRequirements(carreraId: carreraId),
                         ChangeHistory(carreraId: carreraId),
                         Footer(), // Ahora se muestra solo al final, no está fijo
                       ],

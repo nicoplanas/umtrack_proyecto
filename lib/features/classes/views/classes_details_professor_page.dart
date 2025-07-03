@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '/core/widgets/navbar.dart';
 import '../../../features/classes/widgets/classes_details_professor.dart';
 import '../../../core/widgets/footer.dart';
 
@@ -25,7 +24,6 @@ class ClassesDetailsProfessorPage extends StatelessWidget {
         return Scaffold(
           body: ListView(
             children: [
-              Navbar(email: email),
               ClassesDetailsProfessor(
                 claseId: claseId,
                 claseData: claseData,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:umtrack/features/classes/widgets/class.dart';
 
 class Classes extends StatefulWidget {
@@ -76,11 +77,11 @@ class _ClassesState extends State<Classes> {
                   color: const Color(0xFFF8FAFC),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       Text(
                         'Mis Asignaturas',
-                        style: TextStyle(
-                          fontSize: 26,
+                        style: GoogleFonts.poppins(
+                          fontSize: 35,
                           fontWeight: FontWeight.w800,
                           color: Color(0xFF0F172A),
                         ),
@@ -88,7 +89,7 @@ class _ClassesState extends State<Classes> {
                       SizedBox(height: 8),
                       Text(
                         'Selecciona una materia para ver tus evaluaciones y calificaciones',
-                        style: TextStyle(
+                        style: GoogleFonts.poppins(
                           fontSize: 15,
                           color: Color(0xFF64748B),
                         ),
@@ -104,7 +105,28 @@ class _ClassesState extends State<Classes> {
               final horaInicio = horario?['horaInicio'] ?? '';
               final dias = (horario?['dias'] as List<dynamic>?)?.join(', ') ?? '';
               final aula = clase['aula'] ?? '';
-              final promedio = (clase['estudiantes'][_auth.currentUser!.uid]['notaFinal'] ?? 0).toString();
+              final uid = _auth.currentUser!.uid;
+              final estudiante = clase['estudiantes'][uid] ?? {};
+              final evaluacionesClase = clase['evaluaciones'] as Map<String, dynamic>? ?? {};
+              final evaluacionesEstudiante = estudiante['evaluaciones'] as Map<String, dynamic>? ?? {};
+
+              double acumulado = 0;
+              int evaluacionesTotales = evaluacionesClase.length;
+              int evaluacionesCalificadas = 0;
+
+              evaluacionesEstudiante.forEach((evalId, evalData) {
+                final nota = evalData['nota'];
+                final evalClase = evaluacionesClase[evalId];
+
+                if (nota != null && evalClase != null) {
+                  final puntos = (evalClase['ponderacion']?['puntos'] ?? 0).toDouble();
+                  final notaNum = (nota as num).toDouble();
+                  acumulado += (notaNum * puntos) / 20;
+                  evaluacionesCalificadas++;
+                }
+              });
+
+              final promedio = acumulado.toStringAsFixed(1);
 
               return Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -135,8 +157,8 @@ class _ClassesState extends State<Classes> {
                       children: [
                         Text(
                           clase['nombreMateria'] ?? 'Materia',
-                          style: const TextStyle(
-                            fontSize: 20,
+                          style: GoogleFonts.poppins(
+                            fontSize: 30,
                             fontWeight: FontWeight.w700,
                             color: Color(0xFF0F172A),
                           ),
@@ -145,21 +167,25 @@ class _ClassesState extends State<Classes> {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              '$promedio%',
-                              style: TextStyle(
-                                fontSize: 18,
+                              '$promedio/20',
+                              style: GoogleFonts.poppins(
+                                fontSize: 30,
                                 fontWeight: FontWeight.bold,
                                 color: (double.tryParse(promedio) ?? 0) >= 90
                                     ? Colors.green
                                     : (double.tryParse(promedio) ?? 0) >= 85
-                                    ? Colors.orange
-                                    : Colors.redAccent,
+                                    ? Color(0xFFFD8305)
+                                    : Color(0xFFFD8305),
                               ),
                             ),
-                            const Text(
-                              'Promedio',
-                              style: TextStyle(fontSize: 12, color: Colors.black45),
-                            )
+                            Text(
+                              'Acumulado',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Colors.black45,
+                              ),
+                            ),
+
                           ],
                         ),
                       ],
@@ -169,59 +195,72 @@ class _ClassesState extends State<Classes> {
                     /// Profesor y aula
                     Text(
                       'Prof. ${clase['profesorNombre']} - Aula $aula',
-                      style: const TextStyle(color: Colors.black54, fontSize: 14),
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: Colors.black54,
+                      ),
                     ),
-                    const SizedBox(height: 4),
-
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     Text(
                       'Horario',
-                      style: TextStyle(
+                      style: GoogleFonts.poppins(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: Colors.black54,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 10),
                     Row(
                       children: [
+                        // Hora (estilo pill naranja)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: _getColorByHour(horaInicio),
-                            borderRadius: BorderRadius.circular(6),
+                            color: const Color(0xFFFFEAD2), // fondo naranja claro
+                            borderRadius: BorderRadius.circular(32),
                           ),
                           child: Text(
                             horaInicio,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w500,
+                            style: GoogleFonts.poppins(
+                              color: const Color(0xFFFD8305), // texto naranja fuerte
+                              fontWeight: FontWeight.w600,
                               fontSize: 14,
                             ),
                           ),
                         ),
                         const SizedBox(width: 12),
-                        Expanded(
+
+                        // Días (estilo pill gris)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9), // fondo gris claro
+                            borderRadius: BorderRadius.circular(32),
+                          ),
                           child: Text(
                             dias,
-                            style: const TextStyle(
+                            style: GoogleFonts.poppins(
                               fontSize: 14,
-                              color: Colors.black87,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF475569), // gris oscuro
                             ),
                           ),
                         ),
                       ],
                     ),
+                    const SizedBox(height: 12),
 
                     /// Evaluaciones y calificadas
-                    Row(
-                      children: [
-                        _infoBox(label: 'Evaluaciones', value: '4'), // placeholder
-                        const SizedBox(width: 12),
-                        _infoBox(label: 'Calificadas', value: '3'), // placeholder
-                      ],
+                    DefaultTextStyle.merge(
+                      style: GoogleFonts.poppins(color: Colors.black,),
+                      child: Row(
+                        children: [
+                          _infoBox(label: 'Evaluaciones', value: evaluacionesTotales.toString()),
+                          const SizedBox(width: 12),
+                          _infoBox(label: 'Calificadas', value: evaluacionesCalificadas.toString()),
+                        ],
+                      ),
                     ),
-
                     const SizedBox(height: 8),
                     const Divider(height: 24),
                     InkWell(
@@ -235,10 +274,10 @@ class _ClassesState extends State<Classes> {
                       },
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: const [
+                        children: [
                           Text(
                             'Ver detalles',
-                            style: TextStyle(
+                            style: GoogleFonts.poppins(
                               fontSize: 14,
                               color: Color(0xFFFD8305),
                               fontWeight: FontWeight.w600,
@@ -263,26 +302,34 @@ class _ClassesState extends State<Classes> {
   }
 
   Widget _infoBox({required String label, required String value}) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF1F5F9),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+    return Container(
+      width: 350, // o ajusta a 120 si lo quieres un poco más ancho
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF64748B),
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF0F172A),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

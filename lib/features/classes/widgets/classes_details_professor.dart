@@ -12,6 +12,7 @@ import 'package:mime/mime.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http_parser/http_parser.dart';
 import 'dart:math';
+import '../../../core/views/chats_page.dart';
 
 class ClassesDetailsProfessor extends StatelessWidget {
   final String claseId;
@@ -1289,7 +1290,7 @@ class _StudentsTabState extends State<StudentsTab> {
                       .fold<double>(0, (a, b) => a + b);
                   final avatarColor = estudiante['color'] ?? Colors.greenAccent;
 
-                  return GestureDetector( // ← 🔸 Envoltura añadida aquí
+                  return GestureDetector(
                     onTap: () {
                       Navigator.push(
                         context,
@@ -1337,11 +1338,12 @@ class _StudentsTabState extends State<StudentsTab> {
                                       fontSize: 12,
                                       color: const Color(0xFF64748B),
                                     ),
-                                  )
+                                  ),
                                 ],
-                              )
+                              ),
                             ],
                           ),
+
                           Row(
                             children: [
                               totalAcumulado > 0
@@ -1353,11 +1355,7 @@ class _StudentsTabState extends State<StudentsTab> {
                                   ),
                                   children: [
                                     TextSpan(
-                                      text: 'ptos: ',
-                                      style: const TextStyle(color: Colors.black),
-                                    ),
-                                    TextSpan(
-                                      text: '${totalAcumulado.toStringAsFixed(2)}/20',
+                                      text: '${totalAcumulado.toStringAsFixed(2)} ptos',
                                       style: const TextStyle(color: Color(0xFFFB923C)),
                                     ),
                                   ],
@@ -1371,11 +1369,27 @@ class _StudentsTabState extends State<StudentsTab> {
                                   color: const Color(0xFF94A3B8),
                                 ),
                               ),
+                              const SizedBox(width: 8),
+
                               IconButton(
-                                icon: const Icon(Icons.highlight_remove, color: Color(0xFFEF4444)),
+                                icon: const Icon(Icons.chat_bubble_outline, color: Color(0xFF94A3B8)),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ChatsPage(
+                                        studentId: id,
+                                        studentName: nombre,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.remove_circle_outline, color: Color(0xFFEF4444)),
                                 iconSize: 25,
                                 onPressed: () => _deleteEstudiante(id),
-                              )
+                              ),
                             ],
                           ),
                         ],
