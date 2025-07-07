@@ -56,25 +56,18 @@ class ClassesProfessor extends StatelessWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Bienvenido de vuelta, prof. $fullName",
+                  Center(child: Text("Materias Impartidas",
                       style: GoogleFonts.poppins(
-                        fontSize: 22,
+                        fontSize: 35,
                         fontWeight: FontWeight.bold,
                         color: const Color(0xFF0F172A),
-                      )),
+                      ))),
                   const SizedBox(height: 12),
-                  Text("Asignaturas",
+                  Center(child: Text("Seleccione una materia para gestionarla",
                       style: GoogleFonts.poppins(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF0F172A),
-                      )),
-                  const SizedBox(height: 6),
-                  Text("Seleccione una materia para gestionar su progreso",
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
+                        fontSize: 16,
                         color: const Color(0xFF64748B),
-                      )),
+                      ))),
                   const SizedBox(height: 24),
                   if (clases.isEmpty)
                     Center(
