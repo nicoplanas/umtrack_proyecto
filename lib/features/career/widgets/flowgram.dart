@@ -1,9 +1,12 @@
+import 'dart:io';
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
+import 'package:umtrack/features/career/widgets/change_history.dart';
 import '../../career/widgets/additional_requirements.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -12,6 +15,7 @@ import 'dart:typed_data';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
+import 'package:path_provider/path_provider.dart';
 
 class Flowgram extends StatefulWidget {
   final String carreraId;
@@ -85,9 +89,9 @@ class _FlowgramState extends State<Flowgram> {
     }
 
     final trimestresLabels = [
-      '1er Trimestre', '2do Trimestre', '3er Trimestre', '4to Trimestre',
-      '5to Trimestre', '6to Trimestre', '7mo Trimestre', '8vo Trimestre',
-      '9no Trimestre', '10mo Trimestre', '11vo Trimestre', '12vo Trimestre'
+      'Trimestre 1', 'Trimestre 2', 'Trimestre 3', 'Trimestre 4',
+      'Trimestre 5', 'Trimestre 6', 'Trimestre 7', 'Trimestre 8',
+      'Trimestre 9', 'Trimestre 10', 'Trimestre 11', 'Trimestre 12'
     ];
 
     final ultimoTrimestre = materiasReasignadas.keys.isEmpty
@@ -325,42 +329,41 @@ class _FlowgramState extends State<Flowgram> {
     });
   }
 
-  Future<void> _exportarFlujogramaComoPDF() async {
+  Future<void> _exportarFlujogramaComoImagen() async {
     try {
+      // Obtén el RenderObject del flujograma usando el GlobalKey
       final boundary = _flujogramaKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
-      final image = await boundary.toImage(pixelRatio: 3.0); // Usa 2.0–3.0 para mejor calidad
+
+      // Calcula el tamaño total del contenido (incluyendo todo el área desplazable)
+      final size = boundary.size;
+
+      // Generamos la imagen con la resolución indicada
+      final image = await boundary.toImage(pixelRatio: 3.0);
+
+      // Convertimos la imagen en bytes
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       final pngBytes = byteData!.buffer.asUint8List();
 
-      final imageWidth = image.width.toDouble();
-      final imageHeight = image.height.toDouble();
+      // Creamos un Blob para descargar la imagen
+      final blob = html.Blob([Uint8List.fromList(pngBytes)]);
+      final url = html.Url.createObjectUrlFromBlob(blob);
 
-      final pdf = pw.Document();
-      final imageProvider = pw.MemoryImage(pngBytes);
+      // Creamos un enlace de descarga para la imagen
+      final anchor = html.AnchorElement(href: url)
+        ..target = 'blank'
+        ..download = 'flujograma_completo.png';
 
-      pdf.addPage(
-        pw.Page(
-          pageFormat: PdfPageFormat(imageWidth, imageHeight), // ¡Se ajusta al tamaño exacto!
-          build: (pw.Context context) {
-            return pw.Center(
-              child: pw.Image(imageProvider, fit: pw.BoxFit.contain),
-            );
-          },
-        ),
-      );
+      // Iniciamos la descarga
+      anchor.click();
 
-      Navigator.of(context, rootNavigator: true).pop(); // Cierra loading
-
-      await Printing.layoutPdf(
-        onLayout: (PdfPageFormat format) async => pdf.save(),
-      );
+      // Limpiamos el URL después de usarlo
+      html.Url.revokeObjectUrl(url);
     } catch (e) {
-      Navigator.of(context, rootNavigator: true).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al exportar PDF: $e')),
-      );
+      // Si ocurre un error, mostramos un mensaje
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al exportar imagen: $e')));
     }
   }
+
 
   Future<void> _cargarMateriasYActualizarEstado() async {
     _cargandoMaterias = true;
@@ -469,6 +472,17 @@ class _FlowgramState extends State<Flowgram> {
 
     await batch.commit();
     _cargarMateriasYActualizarEstado();
+  }
+
+  double calcularPromedioGeneral() {
+    // Si no hay materias aprobadas, devolvemos 0
+    if (_notasAprobadas.isEmpty) return 0.0;
+
+    // Sumar todas las notas aprobadas
+    final totalNotas = _notasAprobadas.values.fold(0, (sum, nota) => sum + nota);
+
+    // Devolver el promedio de las notas
+    return totalNotas / _notasAprobadas.length;
   }
 
   Future<int?> _solicitarNotaFinal(BuildContext context, String nombreMateria) async {
@@ -1082,6 +1096,7 @@ class _FlowgramState extends State<Flowgram> {
   }
 
   Widget _buildHistorialAcademico() {
+    final promedioGeneral = calcularPromedioGeneral();
     final Map<int, List<Map<String, dynamic>>> materiasPorTrimestre = {};
     final Map<int, double> promedios = {};
     final Map<int, int> cantidadMaterias = {};
@@ -1113,16 +1128,6 @@ class _FlowgramState extends State<Flowgram> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const SizedBox(height: 32),
-              Text(
-                'Historial Académico',
-                style: GoogleFonts.poppins(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF1E293B),
-                ),
-              ),
-              const SizedBox(height: 8),
               Text(
                 'Visualiza cada trimestre, materias cursadas y calificaciones obtenidas.',
                 textAlign: TextAlign.center,
@@ -1131,7 +1136,7 @@ class _FlowgramState extends State<Flowgram> {
                   color: const Color(0xFF64748B),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               Wrap(
                 spacing: 16,
                 runSpacing: 16,
@@ -1294,7 +1299,7 @@ class _FlowgramState extends State<Flowgram> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _leyendaItem('Grave (0–9)', Colors.red),
+                            _leyendaItem('Aplazado (0–9)', Colors.red),
                           ],
                         ),
                       ],
@@ -1358,23 +1363,23 @@ class _FlowgramState extends State<Flowgram> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
 
-                Text(
+                Center(child: Text(
                   'Progreso Académico',
                   style: GoogleFonts.poppins(
                     fontSize: 35,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF1E293B),
                   ),
-                ),
+                )),
                 const SizedBox(height: 8),
-                Text(
+                Center(child: Text(
                   'Visualiza y gestiona tu progreso académico de manera intuitiva',
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w400,
                     color: const Color(0xFF64748B),
                   ),
-                ),
+                )),
                 const SizedBox(height: 32),
 
                 Container(
@@ -1633,7 +1638,6 @@ class _FlowgramState extends State<Flowgram> {
                             ? _buildHistorialAcademico()
                             : _buildRequerimientosAdicionales(),
                       ),
-                      // Menú de tres puntos
                       if (_vistaSeleccionada == 0)
                         Positioned(
                           top: 0,
@@ -1660,87 +1664,18 @@ class _FlowgramState extends State<Flowgram> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
+                                // Cambiar el ícono según el estado de _modoEdicion
                                 IconButton(
-                                  icon: const Icon(Icons.fullscreen, color: Color(0xFF475569)),
-                                  tooltip: 'Expandir Flujograma',
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      barrierDismissible: true,
-                                      builder: (_) {
-                                        return Dialog(
-                                          insetPadding: const EdgeInsets.all(16),
-                                          backgroundColor: Colors.white,
-                                          child: ConstrainedBox(
-                                            constraints: BoxConstraints(
-                                              maxWidth: MediaQuery.of(context).size.width * 0.95,
-                                              maxHeight: MediaQuery.of(context).size.height * 0.85,
-                                            ),
-                                            child: Padding(
-                                              padding: const EdgeInsets.all(24),
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  // Header con cerrar
-                                                  Row(
-                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                    children: [
-                                                      Text(
-                                                        'Vista Ampliada del Flujograma',
-                                                        style: GoogleFonts.poppins(
-                                                          fontSize: 18,
-                                                          fontWeight: FontWeight.w600,
-                                                          color: const Color(0xFF1E293B),
-                                                        ),
-                                                      ),
-                                                      IconButton(
-                                                        icon: const Icon(Icons.close),
-                                                        onPressed: () => Navigator.of(context).pop(),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  const SizedBox(height: 12),
-                                                  // Flujograma expandido con scroll horizontal
-                                                  Flexible(
-                                                    child: SingleChildScrollView(
-                                                      scrollDirection: Axis.horizontal,
-                                                      child: _buildMateriasUI(),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    );
-                                  },
-                                ),
-                                PopupMenuButton<String>(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                                  icon: Icon(
+                                    _modoEdicion ? Icons.close : Icons.edit, // Cambiar entre X y lápiz
+                                    color: Color(0xFFFD8305), // Color del ícono
                                   ),
-                                  onSelected: (value) {
-                                    if (value == 'editar') {
-                                      setState(() {
-                                        _modoEdicion = !_modoEdicion;
-                                        _selectionMode = SelectionMode.none;
-                                      });
-                                    } else if (value == 'pdf') {
-                                      _exportarFlujogramaComoPDF();
-                                    }
+                                  onPressed: () {
+                                    setState(() {
+                                      _modoEdicion = !_modoEdicion; // Cambiar el estado de edición
+                                      _selectionMode = SelectionMode.none; // Resetear la selección
+                                    });
                                   },
-                                  itemBuilder: (context) => [
-                                    PopupMenuItem(
-                                      value: 'editar',
-                                      child: Text(_modoEdicion ? 'Salir del Modo Edición' : 'Editar'),
-                                    ),
-                                    const PopupMenuItem(
-                                      value: 'pdf',
-                                      child: Text('Descargar PDF'),
-                                    ),
-                                  ],
-                                  icon: const Icon(Icons.more_vert),
                                 ),
                               ],
                             ),

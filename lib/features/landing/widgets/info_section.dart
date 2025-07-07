@@ -111,7 +111,7 @@ class InfoSection extends StatelessWidget {
                   color: const Color(0xFF1A1A1A),
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 55),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

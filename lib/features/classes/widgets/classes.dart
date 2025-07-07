@@ -78,21 +78,25 @@ class _ClassesState extends State<Classes> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Mis Asignaturas',
-                        style: GoogleFonts.poppins(
-                          fontSize: 35,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF0F172A),
-                        ),
+                      Center(child:
+                        Text(
+                          'Mis Asignaturas',
+                          style: GoogleFonts.poppins(
+                            fontSize: 35,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF0F172A),
+                          ),
+                        )
                       ),
                       SizedBox(height: 8),
-                      Text(
-                        'Selecciona una materia para ver tus evaluaciones y calificaciones',
-                        style: GoogleFonts.poppins(
-                          fontSize: 15,
-                          color: Color(0xFF64748B),
-                        ),
+                      Center(child:
+                        Text(
+                          'Selecciona una materia para ver tus evaluaciones y calificaciones',
+                          style: GoogleFonts.poppins(
+                            fontSize: 15,
+                            color: Color(0xFF64748B),
+                          ),
+                        )
                       ),
                     ],
                   ),
@@ -129,7 +133,7 @@ class _ClassesState extends State<Classes> {
               final promedio = acumulado.toStringAsFixed(1);
 
               return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                margin: const EdgeInsets.symmetric(horizontal: 25, vertical: 12),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -158,7 +162,7 @@ class _ClassesState extends State<Classes> {
                         Text(
                           clase['nombreMateria'] ?? 'Materia',
                           style: GoogleFonts.poppins(
-                            fontSize: 30,
+                            fontSize: 25,
                             fontWeight: FontWeight.w700,
                             color: Color(0xFF0F172A),
                           ),
@@ -169,7 +173,7 @@ class _ClassesState extends State<Classes> {
                             Text(
                               '$promedio/20',
                               style: GoogleFonts.poppins(
-                                fontSize: 30,
+                                fontSize: 25,
                                 fontWeight: FontWeight.bold,
                                 color: (double.tryParse(promedio) ?? 0) >= 90
                                     ? Colors.green
@@ -190,8 +194,7 @@ class _ClassesState extends State<Classes> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-
+                    const SizedBox(height: 5),
                     /// Profesor y aula
                     Text(
                       'Prof. ${clase['profesorNombre']} - Aula $aula',
@@ -248,7 +251,7 @@ class _ClassesState extends State<Classes> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 18),
 
                     /// Evaluaciones y calificadas
                     DefaultTextStyle.merge(
@@ -304,10 +307,10 @@ class _ClassesState extends State<Classes> {
   Widget _infoBox({required String label, required String value}) {
     return Container(
       width: 350, // o ajusta a 120 si lo quieres un poco más ancho
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

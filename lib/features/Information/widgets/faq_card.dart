@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../models/faq_item.dart';
 
 class FAQCard extends StatefulWidget {
@@ -10,7 +11,7 @@ class FAQCard extends StatefulWidget {
   const FAQCard({
     super.key,
     required this.item,
-    this.backgroundColor = const Color(0xFFF3F3F3),
+    this.backgroundColor = Colors.white,
     this.questionColor = Colors.black,
     this.answerColor = Colors.black87,
   });
@@ -45,37 +46,70 @@ class _FAQCardState extends State<FAQCard> {
       default:
         answerWidget = Text(
           widget.item.answer,
-          style: TextStyle(color: widget.answerColor),
+          style: GoogleFonts.poppins(
+            color: widget.answerColor,
+            fontSize: 14,
+          ),
           textAlign: TextAlign.justify,
         );
     }
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 2,
-      color: widget.backgroundColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ExpansionTile(
-        title: Text(
-          widget.item.question,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-            color: widget.questionColor,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(45, 16, 45, 4),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: const Color(0xFFE0E0E0), // Gris claro para definir borde
+            width: 1,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: answerWidget,
+        child: Theme(
+          data: Theme.of(context).copyWith(
+            dividerColor: Colors.transparent,
+            splashColor: Colors.transparent,
+            highlightColor: Colors.transparent,
           ),
-        ],
-        onExpansionChanged: (expanded) {
-          setState(() => _isExpanded = expanded);
-        },
-        trailing: Icon(
-          _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-          color: Colors.grey,
+          child: ExpansionTile(
+            tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            backgroundColor: Colors.white,
+            trailing: Icon(
+              _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+              color: Colors.black54,
+              size: 24,
+            ),
+            title: Text(
+              widget.item.question,
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+                color: widget.questionColor,
+              ),
+            ),
+            children: [
+              const Divider(
+                color: Color(0xFFE0E0E0),
+                thickness: 1,
+                height: 1,
+              ),
+              const SizedBox(height: 12),
+              answerWidget,
+            ],
+            onExpansionChanged: (expanded) {
+              setState(() => _isExpanded = expanded);
+            },
+          ),
         ),
       ),
     );
@@ -87,15 +121,21 @@ class _FAQCardState extends State<FAQCard> {
       children: [
         Text(
           widget.item.answer,
-          style: TextStyle(color: widget.answerColor),
+          style: GoogleFonts.poppins(
+            color: widget.answerColor,
+            fontSize: 14,
+          ),
           textAlign: TextAlign.justify,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Center(
-          child: Image.asset(
-            assetPath,
-            height: 200,
-            fit: BoxFit.cover,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.asset(
+              assetPath,
+              height: 200,
+              fit: BoxFit.cover,
+            ),
           ),
         ),
       ],

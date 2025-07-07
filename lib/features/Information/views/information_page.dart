@@ -12,6 +12,17 @@ class InformationPage extends StatefulWidget {
   State<InformationPage> createState() => _InformationPageState();
 }
 
+// Debes definir esta clase en tu archivo para que funcione el TabBar fijo al hacer scroll
+class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
+  final TabBar _tabBar;
+  _SliverTabBarDelegate(this._tabBar);
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) => Container(color: Colors.white, child: _tabBar);
+  @override double get maxExtent => _tabBar.preferredSize.height;
+  @override double get minExtent => _tabBar.preferredSize.height;
+  @override bool shouldRebuild(covariant _SliverTabBarDelegate old) => false;
+}
+
 class _InformationPageState extends State<InformationPage> {
   // Controladores de búsqueda
   final TextEditingController _searchController = TextEditingController();
@@ -58,7 +69,7 @@ class _InformationPageState extends State<InformationPage> {
     'Dulces': [
       FAQItem(
         question: 'Local C',
-        answer: 'Nombre:Chip a Cookie ,Horario: 9:30am a 6pm , Tipo de comida: galletas , Precios(dolares): 3_galletas 4,5/6_galletas 7/12_galletas 12',
+        answer: 'Nombre: Chip a Cookie\nHorario: 9:30am a 6pm\nTipo de comida: galletas\nPrecios: 3 galletas 4,5 USD/6 galletas 7 USD/12 galletas 12 USD',
       ),
       FAQItem(
         question: 'Local I',
@@ -100,7 +111,7 @@ class _InformationPageState extends State<InformationPage> {
       FAQItem(
         question: 'Contactos Clave de la UNIMET',
         answer: '''
-**Contactos Generales y Administrativos**
+Contactos Generales y Administrativos**
   * Central Telefónica UNIMET:
     * (0212) 241.48.33
     * (0212) 242.33.42
@@ -235,6 +246,32 @@ class _InformationPageState extends State<InformationPage> {
     super.dispose();
   }
 
+  String selectedTab = 'Feria';
+
+  Widget _buildTabButton(String label, bool isSelected) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          selectedTab = label;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.deepOrange : Colors.grey.shade300,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.poppins(
+            color: isSelected ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
   String _normalize(String input) {
     const withDiacritics = 'áéíóúüñÁÉÍÓÚÜÑ';
     const withoutDiacritics = 'aeiouunAEIOUUN';
@@ -246,169 +283,180 @@ class _InformationPageState extends State<InformationPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            const Navbar(),
-            const SizedBox(height: 30),
-
-            // Título Feria
-            Text(
-              'FERIA',
-              style: GoogleFonts.poppins(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Mapa de la feria
-            Image.asset(
-              'assets/mapaferia.png',
-              height: 300,
-              fit: BoxFit.contain,
-            ),
-            const SizedBox(height: 24),
-
-            // Sección FAQs Feria clasificada
-            Center(
-              child: Text(
-                'Preguntas de la Feria',
-                style: GoogleFonts.poppins(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: TextField(
-                controller: _searchFeriaController,
-                style: const TextStyle(color: Colors.black),
-                decoration: InputDecoration(
-                  hintText: 'Buscar en Feria...',
-                  hintStyle: const TextStyle(color: Colors.black45),
-                  prefixIcon: const Icon(Icons.search, color: Colors.black45),
-                  border: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.deepPurple.shade200),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.deepPurple.shade400),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Column(
-              children: _filteredFeriaFaqItems.entries.map((entry) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Text(
-                            entry.key,
-                            style: GoogleFonts.poppins(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.deepOrange.shade900,
-                            ),
-                          ),
-                        ),
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        body: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) => [
+            SliverToBoxAdapter(child: const Navbar()),
+            SliverToBoxAdapter(
+              child: Container(
+                width: double.infinity,
+                color: const Color(0xFFFF6F00),
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: Column(
+                  children: [
+                    Text(
+                      'Centro de Ayuda',
+                      style: GoogleFonts.poppins(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
-                      const SizedBox(height: 10),
-                      ...entry.value.map((item) => FAQCard(
-                        item: item,
-                        backgroundColor: const Color(0xFFFFF3E0),
-                        questionColor: Colors.black,
-                        answerColor: Colors.black,
-                      )),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 24),
-
-            // Sección Preguntas Frecuentes generales
-            Center(
-              child: Text(
-                'Preguntas Frecuentes Sobre La Universidad',
-                style: GoogleFonts.poppins(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: TextField(
-                controller: _searchController,
-                style: const TextStyle(color: Colors.black),
-                decoration: InputDecoration(
-                  hintText: 'Buscar pregunta...',
-                  hintStyle: const TextStyle(color: Colors.black45),
-                  prefixIcon: const Icon(Icons.search, color: Colors.black45),
-                  border: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.deepPurple.shade200),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.deepPurple.shade400),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Column(
-              children: _filteredCategorizedFaqItems.entries.map((entry) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Text(
-                            entry.key,
-                            style: GoogleFonts.poppins(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.deepOrange.shade900,
-                            ),
-                          ),
-                        ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Encuentra respuestas a las preguntas más frecuentes sobre la\naplicación universitaria',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: Colors.white,
                       ),
-                      const SizedBox(height: 10),
-                      ...entry.value.map((item) => FAQCard(
-                        item: item,
-                        backgroundColor: const Color(0xFFFFF3E0),
-                        questionColor: Colors.black,
-                        answerColor: Colors.black,
-                      )),
-                    ],
-                  ),
-                );
-              }).toList(),
+                    ),
+                  ],
+                ),
+              ),
             ),
-
-            const SizedBox(height: 40),
-            const Footer(),
+            SliverPersistentHeader(
+              delegate: _SliverTabBarDelegate(
+                TabBar(
+                  labelColor: Colors.deepOrange,
+                  unselectedLabelColor: Colors.black54,
+                  indicatorColor: Colors.deepOrange,
+                  tabs: const [
+                    Tab(text: 'Feria'),
+                    Tab(text: 'Universidad'),
+                    Tab(text: 'Contactos'),
+                  ],
+                ),
+              ),
+              pinned: true,
+            ),
           ],
+          body: TabBarView(
+            children: [
+              // FERIA
+              ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  const SizedBox(height: 24),
+                  Center(child: Text('MAPA', style: GoogleFonts.poppins(fontSize: 25, fontWeight: FontWeight.bold, color: Colors.black))),
+                  const SizedBox(height: 12),
+                  Image.asset('assets/mapaferia.png', height: 300, fit: BoxFit.contain),
+                  const SizedBox(height: 24),
+                  const SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 45),
+                    child: TextField(
+                      controller: _searchFeriaController,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Buscar en Feria...',
+                        hintStyle: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                        prefixIcon: const Icon(Icons.search),
+                        filled: true,
+                        fillColor: Colors.grey.shade100,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ..._filteredFeriaFaqItems.entries.expand((entry) => [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(45, 16, 45, 4),
+                      child: Text(entry.key, style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFFFD8305))),
+                    ),
+                    ...entry.value.map((item) => FAQCard(item: item, backgroundColor: Colors.white, questionColor: Colors.black, answerColor: Colors.black)),
+                  ]).toList(),
+                  const SizedBox(height: 40),
+                  const Footer(),
+                ],
+              ),
+
+              // UNIVERSIDAD
+              ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  const SizedBox(height: 24),
+                  const SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 45),
+                    child: TextField(
+                      controller: _searchController,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Buscar pregunta...',
+                        hintStyle: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                        prefixIcon: const Icon(Icons.search),
+                        filled: true,
+                        fillColor: Colors.grey.shade100,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ..._filteredCategorizedFaqItems.entries.expand((entry) => [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(45, 16, 45, 4),
+                      child: Text(entry.key, style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFFFD8305))),
+                    ),
+                    ...entry.value
+                        .where((item) => item.question != 'Contactos Clave de la UNIMET')
+                        .map((item) => FAQCard(
+                      item: item,
+                      backgroundColor: const Color(0xFFFFF3E0),
+                      questionColor: Colors.black,
+                      answerColor: Colors.black,
+                    )),
+                  ]).toList(),
+                  const SizedBox(height: 40),
+                  const Footer(),
+                ],
+              ),
+              // Contactos
+              ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  const SizedBox(height: 24),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      'Directorio de Contactos',
+                      style: GoogleFonts.poppins(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFFFD8305),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ..._allCategorizedFaqItems['Servicios y Trámites']!
+                      .where((item) => item.question.contains('Contactos'))
+                      .map((item) => FAQCard(item: item, backgroundColor: Colors.white)),
+                  const SizedBox(height: 40),
+                  const Footer(),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

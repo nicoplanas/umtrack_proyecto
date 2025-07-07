@@ -87,15 +87,15 @@ class _ChangeHistoryState extends State<ChangeHistory> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          Center(child: Text(
             'Historial de Cambios – $_fechaFormatoCorto',
-            style: GoogleFonts.poppins(fontSize: 35, fontWeight: FontWeight.bold, color: Colors.black87),
-          ),
+            style: GoogleFonts.poppins(fontSize: 35, fontWeight: FontWeight.w700, color: Colors.black87),
+          )),
           const SizedBox(height: 6),
-          Text(
+          Center(child: Text(
             'Seguimiento detallado de todas las modificaciones en el pensum académico',
             style: GoogleFonts.poppins(fontSize: 16, color: Colors.black54),
-          ),
+          )),
           const SizedBox(height: 24),
           Center(
             child: Wrap(

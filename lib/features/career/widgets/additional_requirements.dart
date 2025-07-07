@@ -31,19 +31,13 @@ class _AdditionalRequirementsState extends State<AdditionalRequirements> {
         };
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Requerimientos Adicionales',
-                style: GoogleFonts.poppins(fontSize: 35, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B)),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Gestiona y visualiza el progreso de tus requerimientos académicos adicionales',
-                style: GoogleFonts.poppins(fontSize: 16, color: const Color(0xFF94A3B8)),
-              ),
+              Center(child: Text('Gestiona y visualiza el progreso de tus requerimientos académicos adicionales.',
+                style: GoogleFonts.poppins(fontSize: 14, color: const Color(0xFF94A3B8)),
+              )),
               const SizedBox(height: 24),
               _buildResumen(dataMap),
               const SizedBox(height: 30),
