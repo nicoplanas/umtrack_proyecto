@@ -232,52 +232,75 @@ class _DashboardStudentState extends State<DashboardStudent> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    ...clases.map((clase) {
-                      final hora = clase['horario']?['horaInicio'] ?? '';
-                      final prof = clase['profesorNombre'] ?? '';
-                      final aula = clase['aula'] ?? '';
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+
+                    // Mostrar mensaje cuando la lista de clases está vacía
+                    ...(
+                        clases.isEmpty
+                            ? [
+                          Container(
+                            height: 100, // altura mayor cuando no hay materias
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 6)],
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              'Aún no tienes materias inscritas',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+                        ]
+                            : clases.map((clase) {
+                          final hora = clase['horario']?['horaInicio'] ?? '';
+                          final prof = clase['profesorNombre'] ?? '';
+                          final aula = clase['aula'] ?? '';
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                // Nombre de la materia en color negro
-                                Text(
-                                  clase['nombreMateria'] ?? '',
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 15,
-                                    color: Colors.black, // Color negro
-                                  ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      clase['nombreMateria'] ?? '',
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 15,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                    Text(
+                                      '$prof – $aula',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        color: Colors.grey[700],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                                 Text(
-                                  '$prof – $aula',
+                                  hora,
                                   style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    color: Colors.grey[700],
+                                    color: Colors.orange,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ],
                             ),
-                            Text(
-                              hora,
-                              style: GoogleFonts.poppins(
-                                color: Colors.orange,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
+                          );
+                        }).toList()
+                    ),
                   ],
                 ),
               ),
@@ -307,57 +330,78 @@ class _DashboardStudentState extends State<DashboardStudent> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    ...evaluaciones.map((eval) {
-                      final fecha = eval['fecha'] as DateTime;
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                    ...(
+                        evaluaciones.isEmpty
+                            ? [
+                          Container(
+                            height: 100, // mayor altura cuando no hay evaluaciones
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 6)],
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              'Aún no tienes próximas evaluaciones',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+                        ]
+                            : evaluaciones.map((eval) {
+                          final fecha = eval['fecha'] as DateTime;
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                // Nombre de la evaluación en color negro
-                                Text(
-                                  '${eval['nombre']}',
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 15,
-                                    color: Colors.black, // Color negro
-                                  ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${eval['nombre']}',
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 15,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                    Text(
+                                      DateFormat("d 'de' MMMM, yyyy", 'es_ES').format(fecha),
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        color: Colors.grey[700],
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                Text(
-                                  DateFormat("d 'de' MMMM, yyyy", 'es_ES').format(fecha),
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    color: Colors.grey[700],
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFEDD5),
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                ),
+                                  child: Text(
+                                    _diasRestantes(fecha),
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      color: const Color(0xFFFD8305),
+                                    ),
+                                  ),
+                                )
                               ],
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFFEDD5),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                _diasRestantes(fecha),
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  color: const Color(0xFFFD8305),
-                                ),
-                              ),
-                            )
-                          ],
-                        ),
-                      );
-                    }),
+                          );
+                        }).toList()
+                    ),
                   ],
                 ),
               ),

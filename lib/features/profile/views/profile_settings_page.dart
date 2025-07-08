@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '/core/widgets/navbar.dart';
-import '../../../features/profile/widgets/profile_settings.dart';
+import '../../../features/profile/widgets/profile_settings_student.dart';
 import '../../../core/widgets/footer.dart';
 
 class ProfileSettingsPage extends StatelessWidget {

@@ -25,12 +25,20 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
   final TextEditingController _birthdayController = TextEditingController();
+  final TextEditingController _carnetController = TextEditingController();
+  final TextEditingController _telefonoController = TextEditingController();
 
   String? _tipoUsuario;
   String? _selectedCarrera;
   List<String> _carrerasVisibles = [];
   Map<String, String> _carrerasMap = {};
   bool _isLoadingCarreras = false;
+
+  String? _selectedDepartamento;
+  List<String> _departamentosVisibles = [];
+  Map<String, String> _departamentosMap = {};
+  bool _isLoadingDepartamentos = false;
+
   DateTime? _selectedBirthday;
   bool _obscurePasswords = true;
 
@@ -38,6 +46,20 @@ class _SignUpPageState extends State<SignUpPage> {
   void initState() {
     super.initState();
     _loadCarreras();
+    _loadDepartamentos();
+  }
+
+  @override
+  void dispose() {
+    _nombreController.dispose();
+    _apellidoController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _birthdayController.dispose();
+    _carnetController.dispose();
+    _telefonoController.dispose();
+    super.dispose();
   }
 
   InputDecoration _inputStyle(String label) {
@@ -75,40 +97,56 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Future<void> _loadCarreras() async {
-    setState(() {
-      _isLoadingCarreras = true;
-    });
-
+    setState(() => _isLoadingCarreras = true);
     try {
-      final querySnapshot = await _firestore.collection('carreras').get();
-
-      final Map<String, String> nombreToCodigo = {};
-      final List<String> nombresVisibles = [];
-
-      for (final doc in querySnapshot.docs) {
-        final data = doc.data();
-        final nombre = data['nombre'] ?? doc.id;
-        nombreToCodigo[nombre] = doc.id;
-        nombresVisibles.add(nombre);
+      final qs = await _firestore.collection('carreras').get();
+      final m = <String,String>{};
+      final v = <String>[];
+      for (var d in qs.docs) {
+        final nombre = d.data()['nombre'] ?? d.id;
+        m[nombre] = d.id;
+        v.add(nombre);
       }
-
+      v.sort();
       setState(() {
-        _carrerasMap = nombreToCodigo;
-        _carrerasVisibles = nombresVisibles..sort();
+        _carrerasMap = m;
+        _carrerasVisibles = v;
       });
     } catch (e) {
-      debugPrint('Error al cargar carreras: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al cargar carreras: $e')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al cargar carreras: $e')));
       setState(() {
         _carrerasMap = {};
         _carrerasVisibles = [];
       });
     } finally {
+      setState(() => _isLoadingCarreras = false);
+    }
+  }
+
+  Future<void> _loadDepartamentos() async {
+    setState(() => _isLoadingDepartamentos = true);
+    try {
+      final qs = await _firestore.collection('departamentos').get();
+      final m = <String,String>{};
+      final v = <String>[];
+      for (var d in qs.docs) {
+        final nombre = d.data()['nombre'] ?? d.id;
+        m[nombre] = d.id;
+        v.add(nombre);
+      }
+      v.sort();
       setState(() {
-        _isLoadingCarreras = false;
+        _departamentosMap = m;
+        _departamentosVisibles = v;
       });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al cargar departamentos: $e')));
+      setState(() {
+        _departamentosMap = {};
+        _departamentosVisibles = [];
+      });
+    } finally {
+      setState(() => _isLoadingDepartamentos = false);
     }
   }
 
@@ -139,36 +177,65 @@ class _SignUpPageState extends State<SignUpPage> {
 
     if (_passwordController.text != _confirmPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Las contraseñas no coinciden')));
+        const SnackBar(content: Text('Las contraseñas no coinciden')),
+      );
       return;
     }
 
     if (_tipoUsuario == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Selecciona un tipo de usuario')));
+        const SnackBar(content: Text('Selecciona un tipo de usuario')),
+      );
       return;
     }
 
     if (_tipoUsuario == 'estudiante' && _selectedCarrera == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Selecciona una carrera')));
+        const SnackBar(content: Text('Selecciona una carrera')),
+      );
+      return;
+    }
+
+    if (_tipoUsuario == 'profesor' && _selectedDepartamento == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecciona un departamento')),
+      );
+      return;
+    }
+
+    final carnetText = _carnetController.text.trim();
+    final carnetInt = int.tryParse(carnetText);
+    if (carnetInt == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('El Nro. Carnet debe ser un número entero')),
+      );
+      return;
+    }
+    final existingCarnet = await _firestore
+        .collection('usuarios')
+        .where('uni_card', isEqualTo: carnetInt)
+        .get();
+    if (existingCarnet.docs.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ya existe un usuario con ese número de carnet')),
+      );
       return;
     }
 
     try {
-      final userCredential = await _auth.createUserWithEmailAndPassword(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim());
-
-      final user = userCredential.user;
+      final userCred = await _auth.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+      final user = userCred.user;
       if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Error al crear usuario')));
+          const SnackBar(content: Text('Error al crear usuario')),
+        );
         return;
       }
 
       final now = DateTime.now();
-
       final userData = {
         'userId': user.uid,
         'fullName': '${_nombreController.text.trim()} ${_apellidoController.text.trim()}',
@@ -179,16 +246,18 @@ class _SignUpPageState extends State<SignUpPage> {
         'role': _tipoUsuario == 'estudiante' ? 'student' : 'professor',
         'createdAt': now,
         'lastLoginAt': now,
+        'uni_card': carnetInt,
+        'phone': _telefonoController.text.trim(),
       };
 
       if (_tipoUsuario == 'estudiante') {
-        final carreraCode = _carrerasMap[_selectedCarrera];
-        if (carreraCode == null) throw Exception('Código de carrera no encontrado');
-
+        final carreraCode = _carrerasMap[_selectedCarrera]!;
         userData['major'] = carreraCode;
         userData['dateOfEnrollment'] = now;
         userData['credits'] = 0;
       } else if (_tipoUsuario == 'profesor') {
+        final deptCode = _departamentosMap[_selectedDepartamento]!;
+        userData['department'] = deptCode;
         userData['assignedCourses'] = [];
         userData['dateOfHiring'] = now;
       }
@@ -196,74 +265,51 @@ class _SignUpPageState extends State<SignUpPage> {
       await _firestore.collection('usuarios').doc(user.uid).set(userData);
 
       if (_tipoUsuario == 'estudiante') {
-        final carreraCode = _carrerasMap[_selectedCarrera];
-        if (carreraCode != null) {
-          final flujogramaId = carreraCode.replaceFirst(RegExp(r'^[A-Z]+'), 'FLU');
-
-          final flujogramaDoc = await _firestore.collection('flujogramas').doc(flujogramaId).get();
-
-          if (flujogramaDoc.exists) {
-            final originalData = flujogramaDoc.data();
-            if (originalData != null && originalData.isNotEmpty) {
-              // Agregamos estado y nota a cada materia
-              final flujogramaConEstado = <String, dynamic>{};
-              originalData.forEach((codigo, data) {
-                if (data is Map<String, dynamic>) {
-                  flujogramaConEstado[codigo] = {
-                    ...data,
-                    'estado': 'no_aprobada',
-                    'nota': null,
-                  };
-                } else {
-                  flujogramaConEstado[codigo] = {
-                    'nombre': data.toString(),
-                    'estado': 'no_aprobada',
-                    'nota': null,
-                  };
-                }
-              });
-
-              // Guardar el flujograma del usuario
-              await _firestore
-                  .collection('usuarios')
-                  .doc(user.uid)
-                  .collection('flujogramas')
-                  .doc(flujogramaId)
-                  .set(flujogramaConEstado);
-
-              final requisitosSnap = await _firestore
-                  .collection('flujogramas')
-                  .doc(flujogramaId)
-                  .collection('requisitos_adicionales')
-                  .get();
-
-              for (final doc in requisitosSnap.docs) {
-                await _firestore
-                    .collection('usuarios')
-                    .doc(user.uid)
-                    .collection('requisitos_adicionales')
-                    .doc(doc.id)
-                    .set(doc.data());
+        final carreraCode = _carrerasMap[_selectedCarrera]!;
+        final fluId = carreraCode.replaceFirst(RegExp(r'^[A-Z]+'), 'FLU');
+        final fluDoc = await _firestore.collection('flujogramas').doc(fluId).get();
+        if (fluDoc.exists) {
+          final orig = fluDoc.data();
+          if (orig != null && orig.isNotEmpty) {
+            final en = <String, dynamic>{};
+            orig.forEach((k,v){
+              if (v is Map<String,dynamic>) {
+                en[k] = {...v, 'estado':'no_aprobada','nota':null};
+              } else {
+                en[k] = {'nombre':v.toString(),'estado':'no_aprobada','nota':null};
               }
+            });
+            await _firestore
+                .collection('usuarios').doc(user.uid)
+                .collection('flujogramas').doc(fluId).set(en);
+            final reqs = await _firestore
+                .collection('flujogramas').doc(fluId)
+                .collection('requisitos_adicionales').get();
+            for (final d in reqs.docs) {
+              await _firestore
+                  .collection('usuarios').doc(user.uid)
+                  .collection('requisitos_adicionales').doc(d.id)
+                  .set(d.data());
             }
           }
         }
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Usuario registrado exitosamente')));
-
-      // 🔁 Navegar a la landing page
+        const SnackBar(content: Text('Usuario registrado exitosamente')),
+      );
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const LandingPage()),
       );
     } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.message}')),
+      );
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error inesperado: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error inesperado: $e')),
+      );
     }
   }
 
@@ -288,13 +334,11 @@ class _SignUpPageState extends State<SignUpPage> {
                         Align(
                           alignment: Alignment.centerLeft,
                           child: IconButton(
-                            icon: const Icon(
-                                Icons.arrow_back, color: Color(0xFFFD8305)),
+                            icon: const Icon(Icons.arrow_back, color: Color(0xFFFD8305)),
                             onPressed: () {
                               Navigator.pushReplacement(
                                 context,
-                                MaterialPageRoute(
-                                    builder: (context) => const LandingPage()),
+                                MaterialPageRoute(builder: (context) => const LandingPage()),
                               );
                             },
                           ),
@@ -317,6 +361,8 @@ class _SignUpPageState extends State<SignUpPage> {
                           ),
                         ),
                         const SizedBox(height: 24),
+
+                        // Nombre
                         TextFormField(
                           controller: _nombreController,
                           decoration: _inputStyle('Nombre'),
@@ -325,6 +371,8 @@ class _SignUpPageState extends State<SignUpPage> {
                           value == null || value.isEmpty ? 'Ingrese su nombre' : null,
                         ),
                         const SizedBox(height: 16),
+
+                        // Apellido
                         TextFormField(
                           controller: _apellidoController,
                           decoration: _inputStyle('Apellido'),
@@ -333,20 +381,27 @@ class _SignUpPageState extends State<SignUpPage> {
                           value == null || value.isEmpty ? 'Ingrese su apellido' : null,
                         ),
                         const SizedBox(height: 16),
+
+                        // Correo institucional con validación de dominio
                         TextFormField(
                           controller: _emailController,
                           decoration: _inputStyle('Correo institucional'),
                           style: GoogleFonts.poppins(color: Colors.black87),
                           keyboardType: TextInputType.emailAddress,
                           validator: (value) {
-                            if (value == null || value.isEmpty) return 'Ingrese su email';
-                            final regex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
-                            if (!regex.hasMatch(value)) return 'Email inválido';
+                            if (value == null || value.isEmpty) {
+                              return 'Ingrese su email';
+                            }
+                            if (!(value.endsWith('@unimet.edu.ve') ||
+                                value.endsWith('@correo.unimet.edu.ve'))) {
+                              return 'Debe usar un correo académico';
+                            }
                             return null;
                           },
                         ),
                         const SizedBox(height: 16),
-                        const SizedBox(height: 16),
+
+                        // Fecha de nacimiento
                         Text(
                           'Fecha de nacimiento',
                           style: GoogleFonts.poppins(
@@ -425,7 +480,8 @@ class _SignUpPageState extends State<SignUpPage> {
                                   decoration: _inputStyle('Año'),
                                   value: _selectedBirthday?.year,
                                   items: List.generate(
-                                      DateTime.now().year - 1900 - 10, (i) => DateTime.now().year - 10 - i)
+                                      DateTime.now().year - 1900 - 10,
+                                          (i) => DateTime.now().year - 10 - i)
                                       .map((y) => DropdownMenuItem(value: y, child: Text('$y')))
                                       .toList(),
                                   onChanged: (val) {
@@ -450,6 +506,45 @@ class _SignUpPageState extends State<SignUpPage> {
                           ),
                         ),
                         const SizedBox(height: 16),
+
+                        // Nro. Carnet
+                        TextFormField(
+                          controller: _carnetController,
+                          decoration: _inputStyle('Nro. Carnet'),
+                          keyboardType: TextInputType.number,
+                          style: GoogleFonts.poppins(color: Colors.black87),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Ingrese Nro. de Carnet';
+                            }
+                            if (int.tryParse(value) == null) {
+                              return 'Solo pueden ser números enteros';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Número de teléfono
+                        TextFormField(
+                          controller: _telefonoController,
+                          decoration: _inputStyle('Número de teléfono'),
+                          keyboardType: TextInputType.phone,
+                          style: GoogleFonts.poppins(color: Colors.black87),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Ingrese su número de teléfono';
+                            }
+                            final phoneRegex = RegExp(r'^[0-9]+$');
+                            if (!phoneRegex.hasMatch(value)) {
+                              return 'Solo se aceptan números';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Contraseña
                         TextFormField(
                           controller: _passwordController,
                           obscureText: _obscurePasswords,
@@ -460,55 +555,77 @@ class _SignUpPageState extends State<SignUpPage> {
                                 color: const Color(0xFF64748B),
                               ),
                               onPressed: () {
-                                setState(() {
-                                  _obscurePasswords = !_obscurePasswords;
-                                });
+                                setState(() => _obscurePasswords = !_obscurePasswords);
                               },
                             ),
                           ),
                           style: GoogleFonts.poppins(color: Colors.black87),
                           validator: (value) {
-                            if (value == null || value.isEmpty) return 'Ingrese contraseña';
-                            if (value.length < 6) return 'Mínimo 6 caracteres';
+                            if (value == null || value.isEmpty) {
+                              return 'Ingrese contraseña';
+                            }
+                            if (value.length < 8) {
+                              return 'La contraseña debe tener al menos 8 caracteres';
+                            }
+                            if (!RegExp(r'[A-Z]').hasMatch(value)) {
+                              return 'Debe contener al menos una mayúscula';
+                            }
+                            if (!RegExp(r'[a-z]').hasMatch(value)) {
+                              return 'Debe contener al menos una minúscula';
+                            }
+                            if (!RegExp(r'\d').hasMatch(value)) {
+                              return 'Debe contener al menos un número';
+                            }
+                            if (!RegExp(r'[!@#\$&*~]').hasMatch(value)) {
+                              return 'Debe contener al menos un carácter especial';
+                            }
                             return null;
                           },
                         ),
                         const SizedBox(height: 16),
+
+                        // Confirmar contraseña
                         TextFormField(
                           controller: _confirmPasswordController,
                           obscureText: _obscurePasswords,
                           decoration: _inputStyle('Confirmar contraseña'),
                           style: GoogleFonts.poppins(color: Colors.black87),
                           validator: (value) {
-                            if (value == null || value.isEmpty) return 'Confirme contraseña';
-                            if (value != _passwordController.text) return 'No coinciden';
+                            if (value == null || value.isEmpty) {
+                              return 'Confirme contraseña';
+                            }
+                            if (value != _passwordController.text) {
+                              return 'Las contraseñas no coinciden';
+                            }
                             return null;
                           },
                         ),
                         const SizedBox(height: 16),
+
                         Theme(
-                            data: ThemeData.light().copyWith(
-                              canvasColor: Colors.white,
-                              inputDecorationTheme: const InputDecorationTheme(
-                                fillColor: Colors.white,
-                              ),
+                          data: ThemeData.light().copyWith(
+                            canvasColor: Colors.white,
+                            inputDecorationTheme: const InputDecorationTheme(
+                              fillColor: Colors.white,
                             ),
-                        child: DropdownButtonFormField<String>(
-                          value: _tipoUsuario,
-                          decoration: _inputStyle('Tipo de usuario'),
-                          style: GoogleFonts.poppins(color: Colors.black),
-                          items: const [
-                            DropdownMenuItem(value: 'estudiante', child: Text('Estudiante')),
-                            DropdownMenuItem(value: 'profesor', child: Text('Profesor')),
-                          ],
-                          onChanged: (val) {
-                            setState(() {
-                              _tipoUsuario = val;
-                              _selectedCarrera = null;
-                            });
-                          },
-                          validator: (value) =>
-                          value == null ? 'Seleccione tipo de usuario' : null,
+                          ),
+                          child: DropdownButtonFormField<String>(
+                            value: _tipoUsuario,
+                            decoration: _inputStyle('Tipo de usuario'),
+                            style: GoogleFonts.poppins(color: Colors.black),
+                            items: const [
+                              DropdownMenuItem(value: 'estudiante', child: Text('Estudiante')),
+                              DropdownMenuItem(value: 'profesor', child: Text('Profesor')),
+                            ],
+                            onChanged: (val) {
+                              setState(() {
+                                _tipoUsuario = val;
+                                _selectedCarrera = null;
+                                _selectedDepartamento = null;
+                              });
+                            },
+                            validator: (value) =>
+                            value == null ? 'Seleccione tipo de usuario' : null,
                           ),
                         ),
 
@@ -517,13 +634,13 @@ class _SignUpPageState extends State<SignUpPage> {
                           _isLoadingCarreras
                               ? const Center(child: CircularProgressIndicator())
                               : Theme(
-                              data: ThemeData.light().copyWith(
-                                canvasColor: Colors.white,
-                                inputDecorationTheme: const InputDecorationTheme(
-                                  fillColor: Colors.white,
-                                ),
+                            data: ThemeData.light().copyWith(
+                              canvasColor: Colors.white,
+                              inputDecorationTheme: const InputDecorationTheme(
+                                fillColor: Colors.white,
                               ),
-                              child: DropdownButtonFormField<String>(
+                            ),
+                            child: DropdownButtonFormField<String>(
                               value: _selectedCarrera != null &&
                                   _carrerasVisibles.contains(_selectedCarrera)
                                   ? _selectedCarrera
@@ -543,6 +660,36 @@ class _SignUpPageState extends State<SignUpPage> {
                             ),
                           ),
                         ],
+
+                        if (_tipoUsuario == 'profesor') ...[
+                          const SizedBox(height: 16),
+                          _isLoadingDepartamentos
+                              ? const Center(child: CircularProgressIndicator())
+                              : Theme(
+                            data: ThemeData.light().copyWith(
+                              canvasColor: Colors.white,
+                              inputDecorationTheme: const InputDecorationTheme(
+                                fillColor: Colors.white,
+                              ),
+                            ),
+                            child: DropdownButtonFormField<String>(
+                              value: _selectedDepartamento,
+                              decoration: _inputStyle('Departamento'),
+                              style: GoogleFonts.poppins(color: Colors.black),
+                              items: _departamentosVisibles
+                                  .map((d) => DropdownMenuItem(value: d, child: Text(d)))
+                                  .toList(),
+                              onChanged: (val) {
+                                setState(() {
+                                  _selectedDepartamento = val;
+                                });
+                              },
+                              validator: (value) =>
+                              value == null ? 'Seleccione departamento' : null,
+                            ),
+                          ),
+                        ],
+
                         const SizedBox(height: 24),
                         SizedBox(
                           width: double.infinity,
@@ -552,7 +699,8 @@ class _SignUpPageState extends State<SignUpPage> {
                               backgroundColor: const Color(0xFFFD8305),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
                             child: Text(
                               'Crear Cuenta',
@@ -566,21 +714,21 @@ class _SignUpPageState extends State<SignUpPage> {
                         ),
                         const SizedBox(height: 16),
 
-
-
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
                               "¿Ya tienes una cuenta?",
                               style: GoogleFonts.poppins(
-                                  fontSize: 14, color: Colors.black),
+                                fontSize: 14,
+                                color: Colors.black,
+                              ),
                             ),
                             TextButton(
                               onPressed: () {
-                                Navigator.push(context,
-                                  MaterialPageRoute(
-                                      builder: (context) => const LoginScreen()),
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const LoginScreen()),
                                 );
                               },
                               child: Text(
@@ -620,7 +768,7 @@ class _SignUpPageState extends State<SignUpPage> {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: Image.asset(
-                        'assets/sign_up.png', // Reemplaza con el nombre real
+                        'assets/sign_up.png',
                         width: 400,
                         height: 300,
                         fit: BoxFit.cover,

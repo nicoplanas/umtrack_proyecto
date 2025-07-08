@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../landing/views/landing_page.dart';
 import '/features/auth/views/sign_up_page.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -68,32 +69,29 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> signInWithGoogleWeb(BuildContext context) async {
-    try {
-      final GoogleSignIn googleSignIn = GoogleSignIn();
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-
-      if (googleUser == null) return;
-
-      final GoogleSignInAuthentication googleAuth = await googleUser
-          .authentication;
-
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
+  Future<void> _signInWithGoogle() async {
+    if (kIsWeb) {
+      // 1) Configuro el provider y abro el popup
+      final provider = GoogleAuthProvider()..setCustomParameters({'prompt': 'select_account'});
+      final credential = await FirebaseAuth.instance.signInWithPopup(provider);
+      // 2) Si entra aquí, ya está autenticado en web
+    } else {
+      // 1) Abro el flujo nativo de Google Sign-In
+      final googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) return; // usuario canceló
+      final auth = await googleUser.authentication;
+      // 2) Creo la credencial para Firebase
+      final oauthCred = GoogleAuthProvider.credential(
+        accessToken: auth.accessToken,
+        idToken: auth.idToken,
       );
-
-      await FirebaseAuth.instance.signInWithCredential(credential);
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LandingPage()),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al iniciar con Google: $e')),
-      );
+      // 3) Inicio sesión en Firebase
+      await FirebaseAuth.instance.signInWithCredential(oauthCred);
     }
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LandingPage()),
+    );
   }
 
   @override
@@ -148,6 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: OutlinedButton.icon(
+                            onPressed: _signInWithGoogle,
                             icon: Image.network(
                               'https://res.cloudinary.com/doyt5r47e/image/upload/v1750829495/google_sit4ge.png',
                               height: 20,
@@ -167,7 +166,6 @@ class _LoginScreenState extends State<LoginScreen> {
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8)),
                             ),
-                            onPressed: () => signInWithGoogleWeb(context),
                           ),
                         ),
                         const SizedBox(height: 16),
